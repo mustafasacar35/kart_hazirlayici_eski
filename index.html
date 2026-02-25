@@ -1,0 +1,2696 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Tarif Kartı Üretici - Layer Editor (Gemini + Imagen)</title>
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
+  <style>
+    :root {
+      --bg: #f3f1ee;
+      --panel: #ece7e1;
+      --text: #171717;
+      --muted: #666;
+      --accent: #6a844a;
+      --border: #ddd6cf;
+      --danger: #b00020;
+      --guide: #4aa3ff;
+      --select: #2f80ed;
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      height: 100%
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: #faf8f5;
+    }
+
+    .app {
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .panel {
+      background: #fff;
+      border: 1px solid #ece7e1;
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, .04);
+      position: sticky;
+      top: 12px;
+      max-height: calc(100vh - 24px);
+      overflow: auto;
+    }
+
+    .panel h1,
+    .panel h2 {
+      margin: 0 0 10px;
+      line-height: 1.2;
+    }
+
+    .panel h1 {
+      font-size: 20px
+    }
+
+    .panel h2 {
+      font-size: 16px
+    }
+
+    .group {
+      margin-bottom: 10px
+    }
+
+    .group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px
+    }
+
+    .row>* {
+      flex: 1;
+    }
+
+    input,
+    textarea,
+    select,
+    button {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 10px;
+      font-size: 13px;
+      outline: none;
+      background: white;
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #c9bfb5;
+      box-shadow: 0 0 0 3px rgba(201, 191, 181, .25);
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 700;
+      background: #fff;
+      transition: .15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .06)
+    }
+
+    .btn-primary {
+      background: #171717;
+      color: #fff;
+      border-color: #171717
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent)
+    }
+
+    .btn-danger {
+      background: #fff5f5;
+      color: var(--danger);
+      border-color: #ffd5d5
+    }
+
+    .btn-soft {
+      background: #f7f7f7
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35
+    }
+
+    .status {
+      margin-top: 8px;
+      font-size: 12px;
+      min-height: 18px
+    }
+
+    .status.error {
+      color: var(--danger)
+    }
+
+    .status.ok {
+      color: #0a7f37
+    }
+
+    hr.sep {
+      border: none;
+      border-top: 1px solid #eee;
+      margin: 12px 0;
+    }
+
+    .preview-wrap {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: auto;
+    }
+
+    .card-toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: #fff;
+      border: 1px solid #ece7e1;
+      border-radius: 14px;
+      padding: 10px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, .04);
+      align-items: center;
+    }
+
+    .pill {
+      font-size: 12px;
+      border: 1px solid #e5e5e5;
+      background: #fafafa;
+      border-radius: 999px;
+      padding: 5px 10px;
+    }
+
+    .recipe-card {
+      width: 1080px;
+      height: 1600px;
+      background: var(--bg);
+      position: relative;
+      overflow: hidden;
+      border-radius: 0;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, .1);
+      user-select: none;
+      transform-origin: top left;
+    }
+
+    .hero {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1080px;
+      height: 520px;
+      background: #ddd center/cover no-repeat;
+      z-index: 1;
+    }
+
+    .layer {
+      position: absolute;
+      z-index: 10;
+      cursor: move;
+      min-width: 20px;
+      min-height: 20px;
+      outline: 1px solid transparent;
+      transition: outline-color .08s;
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+
+    .layer.locked {
+      cursor: default;
+    }
+
+    .layer.selected {
+      outline: 2px dashed var(--select);
+      outline-offset: 2px;
+    }
+
+    .layer .content {
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .layer .content[contenteditable="true"] {
+      user-select: text;
+      -webkit-user-select: text;
+      cursor: text;
+      pointer-events: auto;
+      outline: none;
+    }
+
+    .serif {
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    .sans {
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .title-pill-shape {
+      background: var(--panel);
+      border-radius: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 16px 24px;
+    }
+
+    .macro-box-shape {
+      background: var(--panel);
+      border-radius: 24px;
+      padding: 18px 20px;
+    }
+
+    .ingredients-list {
+      margin: 0;
+      padding-left: 26px;
+      list-style: disc;
+    }
+
+    .ingredients-list li {
+      margin: 2px 0;
+    }
+
+    .resize-handle {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: #fff;
+      border: 2px solid var(--select);
+      border-radius: 2px;
+      z-index: 20;
+      display: none;
+    }
+
+    .layer.selected .resize-handle {
+      display: block;
+    }
+
+    .resize-handle.nw {
+      left: -7px;
+      top: -7px;
+      cursor: nwse-resize
+    }
+
+    .resize-handle.ne {
+      right: -7px;
+      top: -7px;
+      cursor: nesw-resize
+    }
+
+    .resize-handle.sw {
+      left: -7px;
+      bottom: -7px;
+      cursor: nesw-resize
+    }
+
+    .resize-handle.se {
+      right: -7px;
+      bottom: -7px;
+      cursor: nwse-resize
+    }
+
+    .guide {
+      position: absolute;
+      background: var(--guide);
+      opacity: .8;
+      z-index: 999;
+      pointer-events: none;
+      display: none;
+    }
+
+    .guide.v {
+      width: 1px;
+      height: 1600px;
+      top: 0;
+    }
+
+    .guide.h {
+      height: 1px;
+      width: 1080px;
+      left: 0;
+    }
+
+    .layers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 260px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .layer-item {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 6px;
+      align-items: center;
+      padding: 8px;
+      border: 1px solid #eee;
+      border-radius: 10px;
+      background: #fafafa;
+      font-size: 12px;
+    }
+
+    .layer-item.active {
+      border-color: #bfd7ff;
+      background: #eef5ff;
+    }
+
+    .layer-item .name {
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .icon-btn {
+      width: auto;
+      min-width: 32px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      background: #fff;
+    }
+
+    .icon-btn.active {
+      border-color: #9fc2ff;
+      background: #eaf2ff;
+      color: #1a63d9;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .three-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .mini {
+      font-size: 11px;
+      color: #666;
+    }
+
+    .footer-note {
+      border: 1px dashed #ddd;
+      border-radius: 12px;
+      padding: 8px 10px;
+      background: #fafafa;
+      font-size: 12px;
+      color: #666;
+    }
+
+    @media (max-width:1600px) {
+      .app {
+        grid-template-columns: 320px 1fr
+      }
+
+      .right-panel {
+        grid-column: 1 / -1;
+        position: static;
+        max-height: none
+      }
+
+      .left-panel {
+        position: static;
+        max-height: none
+      }
+    }
+
+    .btn-danger {
+      background: #e11d48;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-danger:hover {
+      background: #be123c;
+    }
+
+    @media (max-width:1200px) {
+      .app {
+        grid-template-columns: 1fr
+      }
+
+      .panel {
+        position: static;
+        max-height: none
+      }
+
+      .preview-wrap {
+        overflow: auto
+      }
+    }
+
+    .rich-toolbar {
+      position: absolute;
+      display: none;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 4px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .rich-toolbar button {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: 1px solid transparent;
+      background: transparent;
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rich-toolbar button:hover {
+      background: #f0f0f0;
+      border-color: #ddd;
+    }
+
+    .rich-toolbar input[type="color"] {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .rich-toolbar input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    .rich-toolbar input[type="color"]::-webkit-color-swatch {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <!-- SOL PANEL -->
+    <aside class="panel left-panel">
+      <h1>AI Tarif Kartı Üretici</h1>
+      <div class="small">
+        Lokal kullanım için. API anahtarını arayüzden girersin. (Yayınlamadan önce frontend’e key gömmeyin.)
+      </div>
+
+      <div class="group" style="margin-top:10px">
+        <label>Gemini API Key</label>
+        <input id="apiKey" type="password" placeholder="AIza..." />
+        <div class="small">İstersen localStorage’a kaydeder.</div>
+      </div>
+
+      <div class="row">
+        <div class="group">
+          <label>Metin modeli</label>
+          <input id="textModel" value="gemini-2.5-flash" />
+        </div>
+        <div class="group">
+          <label>Görsel modeli (Imagen)</label>
+          <input id="imageModel" value="imagen-4.0-generate-001" />
+        </div>
+      </div>
+
+      <div class="group">
+        <label>Yemek adı</label>
+        <input id="dishName" value="Ketojenik Kurabiye" />
+      </div>
+
+      <div class="row">
+        <div class="group">
+          <label>Servis (porsiyon/kişi vb.)</label>
+          <input id="servings" type="text" value="4 kişilik" />
+        </div>
+        <div class="group">
+          <label>Kart oranı için görsel</label>
+          <select id="imageAspect">
+            <option value="16:9" selected>16:9</option>
+            <option value="4:3">4:3</option>
+            <option value="1:1">1:1</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="group">
+        <label>AI metin prompt şablonu (opsiyonel düzenle)</label>
+        <textarea id="textPromptTemplate"></textarea>
+      </div>
+
+      <div class="group">
+        <label>AI görsel stil prompt eki</label>
+        <textarea
+          id="imageStylePrompt">Photorealistic Turkish food photography, appetizing, premium plating, clean composition, top/front angle suitable for a horizontal recipe card hero image, warm natural light, no text, no watermark, no hands, no utensils touching food, high detail.</textarea>
+      </div>
+
+      <div class="row">
+        <button id="saveKeyBtn">API Key Kaydet</button>
+        <button id="loadKeyBtn">API Key Yükle</button>
+        <button id="clearKeyBtn" class="btn-danger">Key Temizle</button>
+      </div>
+
+      <div class="group" style="margin-top:8px">
+        <label>GitHub PAT (şablon sync için)</label>
+        <input id="githubPat" type="password" placeholder="ghp_..." />
+        <div class="small">mustafasacar35/kart_hazirlayici repo'suna erişim için.</div>
+      </div>
+
+      <hr class="sep">
+
+      <h2>Şablon Yönetimi</h2>
+      <div class="group">
+        <label>Şablon adı</label>
+        <input id="templateName" placeholder="Örn: Keto Kurabiye Şablonu" />
+      </div>
+      <div class="row">
+        <button id="saveTemplateBtn" class="btn-primary">Şablonu Kaydet</button>
+        <button id="pushGithubBtn" class="btn-accent">GitHub'a Gönder</button>
+      </div>
+      <div class="group" style="margin-top:8px">
+        <label>Kayıtlı Şablonlar</label>
+        <select id="templateSelect">
+          <option value="">-- Şablon seç --</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="loadTemplateBtn">Şablon Yükle</button>
+        <button id="pullGithubBtn">GitHub'dan Çek</button>
+        <button id="deleteTemplateBtn" class="btn-danger">Sil</button>
+      </div>
+
+      <hr class="sep">
+
+      <div class="row">
+        <button id="generateDraftBtn" class="btn-primary">1) AI Taslak Oluştur</button>
+        <button id="generateImageBtn" class="btn-accent">2) AI Görsel Üret</button>
+      </div>
+
+      <div class="group" style="margin-top:8px">
+        <label>Görsel Revizyon Notu</label>
+        <textarea id="imageRevisionPrompt" style="min-height:50px"
+          placeholder="Örn: Daha karanlık arka plan, üstten çekim..."></textarea>
+        <button id="revisionImageBtn" style="margin-top:4px">Revizyonlu Görsel Üret</button>
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <button id="renderBtn">3) Kartı Güncelle</button>
+        <button id="downloadBtn">PNG İndir</button>
+      </div>
+
+      <div class="group" style="margin-top:8px">
+        <label>Hero Görseli Yükle</label>
+        <input type="file" id="heroUpload" accept="image/*" />
+        <div class="small">Kendi fotoğrafını kartın üst alanına yükle.</div>
+      </div>
+      <div class="group">
+        <label>Referans Resim → AI İlham</label>
+        <input type="file" id="referenceUpload" accept="image/*" />
+        <div class="small">Yüklediğin resimden esinlenerek AI yeni bir görsel prompt oluşturur.</div>
+      </div>
+
+      <div id="status" class="status"></div>
+
+      <hr class="sep">
+
+      <h2>İçerik Editörü</h2>
+
+      <div class="group">
+        <label>Malzemeler (satır satır)</label>
+        <textarea id="ingredientsEditor"></textarea>
+      </div>
+      <div class="group">
+        <label>Hazırlama</label>
+        <textarea id="preparationEditor" style="min-height:130px"></textarea>
+      </div>
+
+      <div class="group">
+        <label>Makro başlığı</label>
+        <textarea id="macroTitleEditor">1 porsiyon için
+makro değerleri</textarea>
+      </div>
+
+      <div class="group">
+        <label>Görsel prompt (AI draft sonrası gelir, istersen değiştir)</label>
+        <textarea id="imagePromptEditor" style="min-height:100px"></textarea>
+      </div>
+
+      <div class="two-col">
+        <div class="group">
+          <label>Karbonhidrat</label>
+          <input id="carbEditor" value="-" />
+        </div>
+        <div class="group">
+          <label>Protein</label>
+          <input id="proteinEditor" value="-" />
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="group">
+          <label>Yağ</label>
+          <input id="fatEditor" value="-" />
+        </div>
+        <div class="group">
+          <label>Kalori</label>
+          <input id="kcalEditor" value="-" />
+        </div>
+      </div>
+
+      <div class="mini">Not: Kartta görünen alanlar layer (katman) mantığında ayrı ayrı taşınabilir/düzenlenebilir.
+      </div>
+    </aside>
+
+    <!-- ORTA ÖNİZLEME -->
+    <main class="preview-wrap">
+      <div class="card-toolbar">
+        <div class="pill">Kart önizleme (1080x1600)</div>
+        <div class="pill">Katman seç → sağ panelden düzenle</div>
+        <div class="pill">Sürükle-bırak + resize + lock + z-index</div>
+        <div class="pill">Hazırlama metninde justify kullan</div>
+      </div>
+
+      <div id="recipeCard" class="recipe-card">
+        <div id="hero" class="hero"></div>
+
+        <!-- floating rich text toolbar -->
+        <div id="richToolbar" class="rich-toolbar">
+          <button data-cmd="bold" title="Kalın (Bold)"><b>B</b></button>
+          <button data-cmd="italic" title="İtalik (Italic)"><i>I</i></button>
+          <button data-cmd="underline" title="Altı Çizili"><u>U</u></button>
+          <button data-cmd="insertUnorderedList" title="Madde Listesi">•</button>
+          <button data-cmd="insertOrderedList" title="Numaralı Liste">1.</button>
+          <select id="richFontSize" title="Font Boyutu"
+            style="width:52px;height:28px;padding:2px;font-size:12px;border-radius:4px;border:1px solid #ddd">
+            <option value="">Px</option>
+            <option value="1">12</option>
+            <option value="2">16</option>
+            <option value="3">20</option>
+            <option value="4">24</option>
+            <option value="5">32</option>
+            <option value="6">40</option>
+            <option value="7">48</option>
+          </select>
+          <input type="color" id="richColorPicker" title="Yazı Rengi" value="#171717" />
+        </div>
+
+        <!-- snap guides -->
+        <div id="guideVCenter" class="guide v"></div>
+        <div id="guideHCenter" class="guide h"></div>
+
+        <!-- Layer container dynamically filled -->
+      </div>
+
+      <div class="footer-note">
+        İpucu: İlk kullanım sırası → <b>AI Taslak Oluştur</b> → <b>AI Görsel Üret</b> → katmanları yerleştir → <b>PNG
+          İndir</b>
+      </div>
+    </main>
+
+    <!-- SAĞ PANEL: LAYER EDİTÖR -->
+    <aside class="panel right-panel">
+      <h2>Katmanlar (Aşama 1 + Aşama 2)</h2>
+      <div class="small">Her alan ayrı katman. Seç, taşı, boyutlandır, kilitle, öne/arkaya al.</div>
+
+      <div id="layersList" class="layers-list" style="margin-top:10px"></div>
+
+      <hr class="sep">
+
+      <h2>Seçili Katman Ayarları</h2>
+      <div id="noSelectionMsg" class="small">Önizlemeden bir katman seç.</div>
+
+      <div id="layerControls" style="display:none">
+        <div class="group">
+          <label>Katman adı</label>
+          <input id="lc_name" />
+        </div>
+
+        <div class="row">
+          <button id="lc_lock" class="btn-soft">Kilitle</button>
+          <button id="lc_bringFront" class="btn-soft">Öne Al</button>
+          <button id="lc_sendBack" class="btn-soft">Arkaya Al</button>
+        </div>
+
+        <div class="three-col" style="margin-top:8px">
+          <div class="group">
+            <label>X</label>
+            <input id="lc_x" type="number" />
+          </div>
+          <div class="group">
+            <label>Y</label>
+            <input id="lc_y" type="number" />
+          </div>
+          <div class="group">
+            <label>Z</label>
+            <input id="lc_z" type="number" />
+          </div>
+        </div>
+
+        <div class="three-col">
+          <div class="group">
+            <label>Genişlik</label>
+            <input id="lc_w" type="number" />
+          </div>
+          <div class="group">
+            <label>Yükseklik</label>
+            <input id="lc_h" type="number" />
+          </div>
+          <div class="group">
+            <label>Padding</label>
+            <input id="lc_padding" type="number" />
+          </div>
+        </div>
+
+        <div class="three-col">
+          <div class="group">
+            <label>Font boyutu</label>
+            <input id="lc_fontSize" type="number" />
+          </div>
+          <div class="group">
+            <label>Line-height</label>
+            <input id="lc_lineHeight" type="number" step="0.05" />
+          </div>
+          <div class="group">
+            <label>Radius</label>
+            <input id="lc_radius" type="number" />
+          </div>
+        </div>
+
+        <div class="three-col">
+          <div class="group">
+            <label>Hizalama</label>
+            <select id="lc_align">
+              <option value="left">left</option>
+              <option value="center">center</option>
+              <option value="right">right</option>
+              <option value="justify">justify</option>
+            </select>
+          </div>
+          <div class="group">
+            <label>Kalınlık</label>
+            <select id="lc_weight">
+              <option value="400">400</option>
+              <option value="500">500</option>
+              <option value="600">600</option>
+              <option value="700">700</option>
+              <option value="800">800</option>
+            </select>
+          </div>
+          <div class="group">
+            <label>Font türü</label>
+            <select id="lc_fontFamily">
+              <option value="serif">serif</option>
+              <option value="sans">sans</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="group">
+            <label>Yazı rengi</label>
+            <input id="lc_color" type="color" />
+          </div>
+          <div class="group">
+            <label>Arkaplan</label>
+            <input id="lc_bgColor" type="color" />
+          </div>
+        </div>
+
+        <div class="row">
+          <button id="lc_bgTransparent" class="btn-soft">Arkaplanı Şeffaf Yap</button>
+          <button id="lc_resetLayer" class="btn-soft">Katmanı Sıfırla</button>
+        </div>
+
+        <div class="row" style="margin-top:8px">
+          <button id="lc_copyStyle" class="btn-soft" title="Seçili katmanın stilini kopyala">🎨 Stili Kopyala</button>
+          <button id="lc_pasteStyle" class="btn-soft" title="Kopyalanan stili yapıştır">📋 Stili Yapıştır</button>
+        </div>
+
+        <div class="group" style="margin-top:10px">
+          <label>Katman metni / içeriği (metin layer ise)</label>
+          <textarea id="lc_text" style="min-height:100px"></textarea>
+        </div>
+        <div class="row">
+          <button id="lc_applyText" class="btn-soft">Metni Uygula</button>
+          <button id="lc_duplicate" class="btn-soft">Katmanı Klonla</button>
+        </div>
+
+        <div class="mini" style="margin-top:8px">
+          * Liste (malzemeler) katmanında satır satır yazarsan otomatik madde listesi olur. <br>
+          * Justify özellikle “Hazırlama metni” katmanında çok işe yarar.
+        </div>
+      </div>
+
+      <hr class="sep">
+
+      <h2>Tema Hızlı Ayarları</h2>
+      <div class="row">
+        <button id="themeBlackBtn" class="btn-soft">Siyah Başlık Teması</button>
+        <button id="themeGreenBtn" class="btn-soft">Yeşil Başlık Teması</button>
+      </div>
+      <div class="small" style="margin-top:8px">
+        Bu butonlar başlık tonlarını hızlı değiştirir. Sonra tek tek layer üzerinden ince ayar yapabilirsin.
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // =====================================================
+    // Varsayılan Prompt Şablonu
+    // =====================================================
+    const DEFAULT_TEXT_PROMPT_TEMPLATE = `
+Sen deneyimli bir beslenme odaklı tarif editörüsün.
+Kullanıcı için Türkçe bir tarif kartı taslağı üret.
+
+Kurallar:
+- Çıktıyı SADECE geçerli JSON olarak ver.
+- Açıklama, markdown, kod bloğu, ön söz yazma.
+- Makroları "1 porsiyon için" olacak şekilde yaklaşık ver.
+- Miktarları Türkçe ve pratik mutfak dilinde yaz.
+- Hazırlama metni akıcı, kartta kullanılabilecek doğal bir dille olsun.
+- Tarif kartı görseli için ayrıca İngilizce bir imagePrompt üret (food photography odaklı).
+- Görsel promptta yazı/logo/watermark olmasın.
+- Yemeğin sunumu iştah açıcı ve premium görünsün.
+
+Ek kural:
+- Servis sayısı 1 ise "1 kişilik", diğerlerinde "{n} kişilik" yaz.
+- Makro başlığı Türkçe doğal olsun (örn: "1 porsiyon için\\nmakro değerleri" veya özel porsiyon ifadesi).
+
+Beklenen JSON şeması:
+{
+  "title": "string",
+  "servis": "4 kişilik",
+  "macroTitle": "1 porsiyon için\\nmakro değerleri",
+  "macros": {
+    "karbonhidrat": "12 gram",
+    "protein": "33 gram",
+    "yag": "35 gram",
+    "kalori": "495 kcal"
+  },
+  "ingredients": ["...", "..."],
+  "preparation": "string",
+  "imagePrompt": "English prompt for image generation"
+}
+
+Yemek adı: "{{DISH_NAME}}"
+Servis sayısı: {{SERVINGS}}
+`;
+
+    // =====================================================
+    // Global State
+    // =====================================================
+    const CARD_W = 1080;
+    const CARD_H = 1600;
+    const SNAP_TOLERANCE = 8;
+
+    const state = {
+      recipe: {
+        title: "",
+        servis: "4 kişilik",
+        macroTitle: "1 porsiyon için\nmakro değerleri",
+        macros: {
+          karbonhidrat: "-",
+          protein: "-",
+          yag: "-",
+          kalori: "-"
+        },
+        ingredients: [],
+        preparation: "",
+        imagePrompt: ""
+      },
+      generatedImageDataUrl: "",
+      layers: [],
+      selectedLayerId: null,
+      drag: null,
+      resize: null,
+      clipboardLayer: null,
+      copiedStyle: null
+    };
+
+    // =====================================================
+    // DOM refs
+    // =====================================================
+    const els = {
+      apiKey: document.getElementById("apiKey"),
+      textModel: document.getElementById("textModel"),
+      imageModel: document.getElementById("imageModel"),
+      dishName: document.getElementById("dishName"),
+      servings: document.getElementById("servings"),
+      imageAspect: document.getElementById("imageAspect"),
+      textPromptTemplate: document.getElementById("textPromptTemplate"),
+      imageStylePrompt: document.getElementById("imageStylePrompt"),
+
+      saveKeyBtn: document.getElementById("saveKeyBtn"),
+      loadKeyBtn: document.getElementById("loadKeyBtn"),
+      clearKeyBtn: document.getElementById("clearKeyBtn"),
+      generateDraftBtn: document.getElementById("generateDraftBtn"),
+      generateImageBtn: document.getElementById("generateImageBtn"),
+      renderBtn: document.getElementById("renderBtn"),
+      downloadBtn: document.getElementById("downloadBtn"),
+      status: document.getElementById("status"),
+
+      ingredientsEditor: document.getElementById("ingredientsEditor"),
+      preparationEditor: document.getElementById("preparationEditor"),
+      macroTitleEditor: document.getElementById("macroTitleEditor"),
+      imagePromptEditor: document.getElementById("imagePromptEditor"),
+      carbEditor: document.getElementById("carbEditor"),
+      proteinEditor: document.getElementById("proteinEditor"),
+      fatEditor: document.getElementById("fatEditor"),
+      kcalEditor: document.getElementById("kcalEditor"),
+
+      recipeCard: document.getElementById("recipeCard"),
+      hero: document.getElementById("hero"),
+      guideVCenter: document.getElementById("guideVCenter"),
+      guideHCenter: document.getElementById("guideHCenter"),
+
+      layersList: document.getElementById("layersList"),
+      noSelectionMsg: document.getElementById("noSelectionMsg"),
+      layerControls: document.getElementById("layerControls"),
+
+      lc_name: document.getElementById("lc_name"),
+      lc_lock: document.getElementById("lc_lock"),
+      lc_bringFront: document.getElementById("lc_bringFront"),
+      lc_sendBack: document.getElementById("lc_sendBack"),
+
+      lc_x: document.getElementById("lc_x"),
+      lc_y: document.getElementById("lc_y"),
+      lc_z: document.getElementById("lc_z"),
+      lc_w: document.getElementById("lc_w"),
+      lc_h: document.getElementById("lc_h"),
+      lc_padding: document.getElementById("lc_padding"),
+      lc_fontSize: document.getElementById("lc_fontSize"),
+      lc_lineHeight: document.getElementById("lc_lineHeight"),
+      lc_radius: document.getElementById("lc_radius"),
+      lc_align: document.getElementById("lc_align"),
+      lc_weight: document.getElementById("lc_weight"),
+      lc_fontFamily: document.getElementById("lc_fontFamily"),
+      lc_color: document.getElementById("lc_color"),
+      lc_bgColor: document.getElementById("lc_bgColor"),
+      lc_bgTransparent: document.getElementById("lc_bgTransparent"),
+      lc_resetLayer: document.getElementById("lc_resetLayer"),
+      lc_text: document.getElementById("lc_text"),
+      lc_applyText: document.getElementById("lc_applyText"),
+      lc_duplicate: document.getElementById("lc_duplicate"),
+      lc_copyStyle: document.getElementById("lc_copyStyle"),
+      lc_pasteStyle: document.getElementById("lc_pasteStyle"),
+
+      themeBlackBtn: document.getElementById("themeBlackBtn"),
+      themeGreenBtn: document.getElementById("themeGreenBtn"),
+
+      // New elements
+      githubPat: document.getElementById("githubPat"),
+      templateName: document.getElementById("templateName"),
+      templateSelect: document.getElementById("templateSelect"),
+      saveTemplateBtn: document.getElementById("saveTemplateBtn"),
+      loadTemplateBtn: document.getElementById("loadTemplateBtn"),
+      deleteTemplateBtn: document.getElementById("deleteTemplateBtn"),
+      pushGithubBtn: document.getElementById("pushGithubBtn"),
+      pullGithubBtn: document.getElementById("pullGithubBtn"),
+      heroUpload: document.getElementById("heroUpload"),
+      referenceUpload: document.getElementById("referenceUpload"),
+      imageRevisionPrompt: document.getElementById("imageRevisionPrompt"),
+      revisionImageBtn: document.getElementById("revisionImageBtn"),
+    };
+
+    // =====================================================
+    // Helpers
+    // =====================================================
+    function setStatus(msg, type = "") {
+      els.status.textContent = msg || "";
+      els.status.className = "status" + (type ? " " + type : "");
+    }
+
+    function safeJsonParse(text) {
+      try { return JSON.parse(text); } catch (e) { }
+      const first = text.indexOf("{");
+      const last = text.lastIndexOf("}");
+      if (first !== -1 && last !== -1 && last > first) {
+        return JSON.parse(text.slice(first, last + 1));
+      }
+      throw new Error("JSON parse edilemedi.");
+    }
+
+    function base64ToDataUrl(base64, mime = "image/png") {
+      return `data:${mime};base64,${base64}`;
+    }
+
+    function uuid() {
+      return "l_" + Math.random().toString(36).slice(2, 10);
+    }
+
+    function parseCssColorToHex(color) {
+      if (!color) return "#000000";
+      if (color.startsWith("#")) return color;
+      const m = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+      if (!m) return "#000000";
+      const r = Number(m[1]), g = Number(m[2]), b = Number(m[3]);
+      return "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
+    }
+
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+    function getLayerById(id) {
+      return state.layers.find(l => l.id === id);
+    }
+
+    function bringLayerToFront(layer) {
+      const maxZ = Math.max(...state.layers.map(l => l.z || 1), 1);
+      layer.z = maxZ + 1;
+    }
+
+    function sendLayerToBack(layer) {
+      const minZ = Math.min(...state.layers.map(l => l.z || 1), 1);
+      layer.z = minZ - 1;
+    }
+
+    function normalizeLayerZ() {
+      state.layers.sort((a, b) => (a.z || 0) - (b.z || 0));
+      state.layers.forEach((l, i) => l.z = i + 2);
+    }
+
+    function showGuides(v = false, h = false) {
+      els.guideVCenter.style.display = v ? "block" : "none";
+      els.guideHCenter.style.display = h ? "block" : "none";
+      els.guideVCenter.style.left = `${CARD_W / 2}px`;
+      els.guideHCenter.style.top = `${CARD_H / 2}px`;
+    }
+
+    function structuredCloneSafe(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    function escapeHtml(str = "") {
+      return str
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    // =====================================================
+    // Recipe content <-> editor sync
+    // =====================================================
+    function fillEditorsFromRecipe() {
+      const r = state.recipe;
+      els.ingredientsEditor.value = (r.ingredients || []).join("\n");
+      els.preparationEditor.value = r.preparation || "";
+      els.macroTitleEditor.value = r.macroTitle || "1 porsiyon için\nmakro değerleri";
+      els.imagePromptEditor.value = r.imagePrompt || "";
+      els.carbEditor.value = r.macros?.karbonhidrat || "-";
+      els.proteinEditor.value = r.macros?.protein || "-";
+      els.fatEditor.value = r.macros?.yag || "-";
+      els.kcalEditor.value = r.macros?.kalori || "-";
+    }
+
+    function updateRecipeFromEditors() {
+      state.recipe.title = els.dishName.value.trim() || state.recipe.title || "Tarif";
+      state.recipe.servis = els.servings.value.trim() || state.recipe.servis;
+      state.recipe.ingredients = els.ingredientsEditor.value.split("\n").map(s => s.trim()).filter(Boolean);
+      state.recipe.preparation = els.preparationEditor.value.trim();
+      state.recipe.macroTitle = (els.macroTitleEditor.value || "").trim() || "1 porsiyon için\nmakro değerleri";
+      state.recipe.imagePrompt = els.imagePromptEditor.value.trim();
+      state.recipe.macros = {
+        karbonhidrat: els.carbEditor.value.trim() || "-",
+        protein: els.proteinEditor.value.trim() || "-",
+        yag: els.fatEditor.value.trim() || "-",
+        kalori: els.kcalEditor.value.trim() || "-"
+      };
+    }
+
+    // =====================================================
+    // Layer Model
+    // =====================================================
+    function defaultLayers() {
+      const panel = "#ece7e1";
+      return [
+        {
+          id: uuid(),
+          key: "titleShape",
+          name: "Başlık Arkaplanı",
+          type: "shape",
+          shape: "pill",
+          text: "",
+          x: 48, y: 486, w: 984, h: 110,
+          z: 10,
+          bgColor: panel,
+          bgTransparent: false,
+          radius: 28,
+          locked: false
+        },
+        {
+          id: uuid(),
+          key: "titleText",
+          name: "Başlık Metni",
+          type: "text",
+          text: state.recipe.title || "Tarif Başlığı",
+          x: 48, y: 486, w: 984, h: 110,
+          z: 11,
+          fontFamily: "serif",
+          fontSize: 38,
+          lineHeight: 1.1,
+          fontWeight: "700",
+          color: "#171717",
+          bgColor: "transparent",
+          bgTransparent: true,
+          padding: 18,
+          textAlign: "center",
+          locked: false
+        },
+        {
+          id: uuid(),
+          key: "ingTitle",
+          name: "Malzemeler Başlık",
+          type: "text",
+          text: "Malzemeler",
+          x: 70, y: 660, w: 520, h: 72,
+          z: 12,
+          fontFamily: "serif",
+          fontSize: 60,
+          lineHeight: 1,
+          fontWeight: "500",
+          color: "#171717",
+          bgColor: "transparent",
+          bgTransparent: true,
+          padding: 0,
+          radius: 0,
+          textAlign: "left",
+          locked: false
+        },
+        {
+          id: uuid(),
+          key: "ingList",
+          name: "Malzemeler Liste",
+          type: "list",
+          text: (state.recipe.ingredients || []).join("\n"),
+          x: 85, y: 742, w: 620, h: 390,
+          z: 13,
+          fontFamily: "sans",
+          fontSize: 22,
+          lineHeight: 1.35,
+          fontWeight: "400",
+          color: "#171717",
+          bgColor: "transparent",
+          bgTransparent: true,
+          padding: 0,
+          radius: 0,
+          textAlign: "left",
+          locked: false
+        },
+        {
+          id: uuid(),
+          key: "servisTitle",
+          name: "Servis Başlığı",
+          type: "text",
+          text: `Servis: ${state.recipe.servis || "4 kişilik"}`,
+          x: 730, y: 728, w: 300, h: 42,
+          z: 14,
+          fontFamily: "sans",
+          fontSize: 26,
+          lineHeight: 1.2,
+          fontWeight: "800",
+          color: "#171717",
+          bgColor: "transparent",
+          bgTransparent: true,
+          padding: 0,
+          radius: 0,
+          textAlign: "center",
+          locked: false
+        },
+        {
+          id: uuid(),
+          key: "macroShape",
+          name: "Makro Arkaplanı",
+          type: "shape",
+          text: "",
+          x: 730, y: 780, w: 300, h: 250,
+          z: 15,
+          bgColor: panel,
+          bgTransparent: false,
+          radius: 24,
+          locked: false
+        },
+        {
+          id: uuid(),
+          key: "macroTitleBox",
+          name: "Makro Başlığı",
+          type: "text",
+          text: state.recipe.macroTitle || "1 porsiyon için\nmakro değerleri",
+          x: 730, y: 780, w: 300, h: 70,
+          z: 16,
+          fontFamily: "sans",
+          fontSize: 18,
+          lineHeight: 1.2,
+          fontWeight: "800",
+          color: "#171717",
+          bgColor: "transparent",
+          bgTransparent: true,
+          padding: 0,
+          radius: 0,
+          textAlign: "center",
+          locked: false
+        },
+        {
+          id: uuid(),
+          key: "macroBox",
+          name: "Makro Metni",
+          type: "macro",
+          text: "",
+          x: 730, y: 860, w: 300, h: 170,
+          z: 17,
+          fontFamily: "sans",
+          fontSize: 20,
+          lineHeight: 1.35,
+          fontWeight: "400",
+          color: "#171717",
+          bgColor: "transparent",
+          bgTransparent: true,
+          padding: 18,
+          radius: 0,
+          textAlign: "center",
+          locked: false
+        },
+        {
+          id: uuid(),
+          key: "prepTitle",
+          name: "Hazırlama Başlık",
+          type: "text",
+          text: "Hazırlama",
+          x: 70, y: 1120, w: 540, h: 72,
+          z: 18,
+          fontFamily: "serif",
+          fontSize: 60,
+          lineHeight: 1,
+          fontWeight: "500",
+          color: "#171717",
+          bgColor: "transparent",
+          bgTransparent: true,
+          padding: 0,
+          radius: 0,
+          textAlign: "left",
+          locked: false
+        },
+        {
+          id: uuid(),
+          key: "prepBody",
+          name: "Hazırlama Metni",
+          type: "text",
+          text: state.recipe.preparation || "Hazırlama metni burada görünecek.",
+          x: 70, y: 1208, w: 940, h: 320,
+          z: 19,
+          fontFamily: "sans",
+          fontSize: 21,
+          lineHeight: 1.38,
+          fontWeight: "400",
+          color: "#171717",
+          bgColor: "transparent",
+          bgTransparent: true,
+          padding: 0,
+          radius: 0,
+          textAlign: "justify",
+          locked: false
+        }
+      ];
+    }
+
+    function buildLayersFromRecipeIfNeeded(force = false) {
+      if (force || !state.layers.length) {
+        state.layers = defaultLayers();
+        normalizeLayerZ();
+      } else {
+        const titleText = state.layers.find(l => l.key === "titleText");
+        const titlePill = state.layers.find(l => l.key === "titlePill"); // Fallback for old templates
+        const title = titleText || titlePill;
+
+        const ingList = state.layers.find(l => l.key === "ingList");
+        const servis = state.layers.find(l => l.key === "servisTitle");
+        const macroTitleBox = state.layers.find(l => l.key === "macroTitleBox");
+        const prep = state.layers.find(l => l.key === "prepBody");
+        if (title) title.text = state.recipe.title || title.text;
+        if (ingList) {
+          // If editing a fresh sync without HTML tags, separate by newline
+          if (ingList.text.indexOf("<li>") === -1 && state.recipe.ingredients.length > 0) {
+            ingList.text = state.recipe.ingredients.join("\n");
+          }
+        }
+        if (servis) servis.text = `Servis: ${state.recipe.servis || "4 kişilik"}`;
+        if (macroTitleBox) macroTitleBox.text = state.recipe.macroTitle || macroTitleBox.text;
+        if (prep) prep.text = state.recipe.preparation || prep.text;
+      }
+    }
+
+    // =====================================================
+    // Render Layers
+    // =====================================================
+    function removeExistingRenderedLayers() {
+      const old = els.recipeCard.querySelectorAll(".layer");
+      old.forEach(n => n.remove());
+    }
+
+    function renderHero() {
+      if (state.generatedImageDataUrl) {
+        els.hero.style.backgroundImage = `url("${state.generatedImageDataUrl}")`;
+      } else {
+        els.hero.style.backgroundImage = "linear-gradient(135deg,#ddd,#cfcfcf)";
+      }
+    }
+
+    function autoShrinkTitle(layer, contentEl) {
+      if (layer.key !== "titlePill") return;
+      const maxLoops = 14;
+      let fs = layer.fontSize;
+      contentEl.style.fontSize = fs + "px";
+      contentEl.style.lineHeight = String(layer.lineHeight);
+      let loops = 0;
+      while (loops < maxLoops && (contentEl.scrollHeight > contentEl.clientHeight || contentEl.scrollWidth > contentEl.clientWidth)) {
+        fs -= 1;
+        if (fs < 20) break;
+        contentEl.style.fontSize = fs + "px";
+        loops++;
+      }
+    }
+
+    function applyLayerStylesToElement(layer, el) {
+      el.style.left = layer.x + "px";
+      el.style.top = layer.y + "px";
+      el.style.width = layer.w + "px";
+      el.style.height = layer.h + "px";
+      el.style.zIndex = layer.z;
+
+      const c = el.querySelector(".content");
+      if (!c) return;
+
+      c.style.width = "100%";
+      c.style.height = "100%";
+      c.style.fontSize = layer.fontSize + "px";
+      c.style.lineHeight = String(layer.lineHeight);
+      c.style.fontWeight = String(layer.fontWeight);
+      c.style.color = layer.color || "#171717";
+      c.style.textAlign = layer.textAlign || "left";
+      c.style.padding = (layer.padding || 0) + "px";
+      c.style.borderRadius = (layer.radius || 0) + "px";
+
+      if (layer.shape === "pill") {
+        c.classList.add("title-pill-shape");
+        c.style.background = layer.bgTransparent ? "transparent" : (layer.bgColor || "#ece7e1");
+        autoShrinkTitle(layer, c);
+      } else if (layer.type === "macro") {
+        c.classList.add("macro-box-shape");
+        c.style.background = layer.bgTransparent ? "transparent" : (layer.bgColor || "#ece7e1");
+      } else {
+        c.style.background = layer.bgTransparent ? "transparent" : (layer.bgColor || "transparent");
+      }
+
+      if (layer.textAlign === "justify") {
+        c.style.textJustify = "inter-word";
+      }
+    }
+
+    function createLayerElement(layer) {
+      const el = document.createElement("div");
+      el.className = "layer";
+      el.dataset.layerId = layer.id;
+      if (layer.locked) el.classList.add("locked");
+      if (state.selectedLayerId === layer.id) el.classList.add("selected");
+
+      const c = document.createElement("div");
+      c.className = "content " + (layer.fontFamily === "serif" ? "serif" : "sans");
+
+      if (layer.type === "shape") {
+        // Just a background shape, no text rendering inside.
+        if (layer.shape === "pill") {
+          c.classList.add("title-pill-shape");
+          c.style.background = layer.bgTransparent ? "transparent" : (layer.bgColor || "#ece7e1");
+        } else {
+          c.classList.add("macro-box-shape");
+          c.style.background = layer.bgTransparent ? "transparent" : (layer.bgColor || "#ece7e1");
+        }
+      } else if (layer.type === "list") {
+        if (layer.text && layer.text.indexOf("<ul") !== -1) {
+          c.innerHTML = layer.text;
+        } else {
+          const ul = document.createElement("ul");
+          ul.className = "ingredients-list";
+          const lines = (layer.text || "").split("\n").map(s => s.trim()).filter(Boolean);
+          lines.forEach(line => {
+            const li = document.createElement("li");
+            li.textContent = line;
+            ul.appendChild(li);
+          });
+          c.appendChild(ul);
+        }
+      } else if (layer.type === "macro") {
+        const box = document.createElement("div");
+        box.style.width = "100%";
+        box.style.height = "100%";
+        box.style.display = "flex";
+        box.style.flexDirection = "column";
+        box.style.justifyContent = "center";
+        box.style.alignItems = "center";
+        box.style.textAlign = "center";
+
+        const lines = [
+          `Karbonhidrat: ${state.recipe.macros?.karbonhidrat || "-"}`,
+          `Protein: ${state.recipe.macros?.protein || "-"}`,
+          `Yağ: ${state.recipe.macros?.yag || "-"}`,
+          `Kalori: ${state.recipe.macros?.kalori || "-"}`
+        ];
+        lines.forEach(t => {
+          const d = document.createElement("div");
+          d.style.fontSize = layer.fontSize + "px";
+          d.style.lineHeight = layer.lineHeight;
+          d.style.margin = "2px 0";
+          d.textContent = t;
+          box.appendChild(d);
+        });
+        c.appendChild(box);
+      } else {
+        c.innerHTML = layer.text || "";
+      }
+
+      el.appendChild(c);
+
+      ["nw", "ne", "sw", "se"].forEach(pos => {
+        const h = document.createElement("div");
+        h.className = "resize-handle " + pos;
+        h.dataset.handle = pos;
+        el.appendChild(h);
+      });
+
+      applyLayerStylesToElement(layer, el);
+
+      el.addEventListener("mousedown", onLayerMouseDown);
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectLayer(layer.id);
+      });
+      // NOTE: dblclick is handled via event delegation on els.recipeCard
+      // because renderCardLayers() destroys/recreates elements, preventing
+      // per-element dblclick from ever firing.
+
+      return el;
+    }
+
+    function renderLayersList() {
+      els.layersList.innerHTML = "";
+      const sorted = [...state.layers].sort((a, b) => (b.z || 0) - (a.z || 0));
+      sorted.forEach(layer => {
+        const item = document.createElement("div");
+        item.className = "layer-item" + (layer.id === state.selectedLayerId ? " active" : "");
+        item.innerHTML = `
+          <div class="name" title="${escapeHtml(layer.name)}">${escapeHtml(layer.name)}</div>
+          <button class="icon-btn ${layer.locked ? "active" : ""}" data-act="lock">${layer.locked ? "🔒" : "🔓"}</button>
+          <button class="icon-btn" data-act="up">↑</button>
+          <button class="icon-btn" data-act="down">↓</button>
+        `;
+        item.addEventListener("click", (e) => {
+          if (!(e.target instanceof HTMLElement)) return;
+          const act = e.target.dataset.act;
+          selectLayer(layer.id);
+          if (!act) return;
+          e.stopPropagation();
+          const l = getLayerById(layer.id);
+          if (!l) return;
+          if (act === "lock") {
+            l.locked = !l.locked;
+          } else if (act === "up") {
+            bringLayerToFront(l);
+            normalizeLayerZ();
+          } else if (act === "down") {
+            sendLayerToBack(l);
+            normalizeLayerZ();
+          }
+          renderCardLayers();
+        });
+        els.layersList.appendChild(item);
+      });
+    }
+
+    function syncLayerControlsFromSelection() {
+      const layer = getLayerById(state.selectedLayerId);
+      if (!layer) {
+        els.noSelectionMsg.style.display = "block";
+        els.layerControls.style.display = "none";
+        return;
+      }
+      els.noSelectionMsg.style.display = "block"; // küçük bug önleme? yanlış oldu demeyelim; altta görünümü kapatıyoruz
+      els.noSelectionMsg.style.display = "none";
+      els.layerControls.style.display = "block";
+
+      els.lc_name.value = layer.name || "";
+      els.lc_x.value = Math.round(layer.x);
+      els.lc_y.value = Math.round(layer.y);
+      els.lc_z.value = Math.round(layer.z || 1);
+      els.lc_w.value = Math.round(layer.w);
+      els.lc_h.value = Math.round(layer.h);
+      els.lc_padding.value = Math.round(layer.padding || 0);
+      els.lc_fontSize.value = Math.round(layer.fontSize || 16);
+      els.lc_lineHeight.value = Number(layer.lineHeight || 1.2);
+      els.lc_radius.value = Math.round(layer.radius || 0);
+      els.lc_align.value = layer.textAlign || "left";
+      els.lc_weight.value = String(layer.fontWeight || "400");
+      els.lc_fontFamily.value = layer.fontFamily || "sans";
+      els.lc_color.value = parseCssColorToHex(layer.color || "#171717");
+      els.lc_bgColor.value = layer.bgTransparent ? "#ece7e1" : parseCssColorToHex(layer.bgColor || "#ece7e1");
+      els.lc_text.value = (layer.type === "macro") ? "" : (layer.text || "");
+
+      els.lc_lock.textContent = layer.locked ? "Kilidi Aç" : "Kilitle";
+      els.lc_lock.classList.toggle("active", !!layer.locked);
+
+      const isMacro = layer.type === "macro";
+      els.lc_text.disabled = isMacro;
+      els.lc_applyText.disabled = isMacro;
+      els.lc_text.placeholder = isMacro ? "Makro kutusu içeriği soldaki makro alanlarından gelir." : "";
+    }
+
+    function applyControlsToSelectedLayer() {
+      const layer = getLayerById(state.selectedLayerId);
+      if (!layer) return;
+
+      layer.name = els.lc_name.value || layer.name;
+      layer.x = clamp(Number(els.lc_x.value || 0), -1000, CARD_W + 1000);
+      layer.y = clamp(Number(els.lc_y.value || 0), -1000, CARD_H + 1000);
+      layer.z = Number(els.lc_z.value || layer.z || 1);
+      layer.w = clamp(Number(els.lc_w.value || 50), 20, 3000);
+      layer.h = clamp(Number(els.lc_h.value || 20), 20, 3000);
+      layer.padding = clamp(Number(els.lc_padding.value || 0), 0, 200);
+      layer.fontSize = clamp(Number(els.lc_fontSize.value || 16), 8, 200);
+      layer.lineHeight = clamp(Number(els.lc_lineHeight.value || 1.2), 0.6, 3);
+      layer.radius = clamp(Number(els.lc_radius.value || 0), 0, 200);
+      layer.textAlign = els.lc_align.value;
+      layer.fontWeight = els.lc_weight.value;
+      layer.fontFamily = els.lc_fontFamily.value;
+      layer.color = els.lc_color.value;
+      if (!layer.bgTransparent) layer.bgColor = els.lc_bgColor.value;
+
+      normalizeLayerZ();
+      renderCardLayers();
+      saveState();
+    }
+
+    function resetLayerToDefault(layer) {
+      const defs = defaultLayers();
+      const d = defs.find(x => x.key === layer.key);
+      if (!d) return;
+      const currentKey = layer.key;
+      const currentId = layer.id;
+      Object.assign(layer, structuredCloneSafe(d));
+      layer.id = currentId;
+      layer.key = currentKey;
+
+      if (layer.key === "titlePill") layer.text = state.recipe.title || d.text;
+      if (layer.key === "ingList") layer.text = (state.recipe.ingredients || []).join("\n");
+      if (layer.key === "servisTitle") layer.text = `Servis: ${state.recipe.servis || "4 kişilik"}`;
+      if (layer.key === "prepBody") layer.text = state.recipe.preparation || d.text;
+    }
+
+    function duplicateLayer(layer) {
+      const c = structuredCloneSafe(layer);
+      c.id = uuid();
+      c.name = layer.name + " (Kopya)";
+      c.x += 20;
+      c.y += 20;
+      c.z += 1;
+      state.layers.push(c);
+      normalizeLayerZ();
+      selectLayer(c.id);
+    }
+
+    function selectLayer(id) {
+      if (state.selectedLayerId === id) return; // don't re-render if same
+      state.selectedLayerId = id;
+      renderCardLayers();
+    }
+
+    function clearSelection() {
+      state.selectedLayerId = null;
+      renderCardLayers();
+    }
+
+    function renderCardLayers() {
+      renderHero();
+      removeExistingRenderedLayers();
+
+      const sorted = [...state.layers].sort((a, b) => (a.z || 0) - (b.z || 0));
+      sorted.forEach(layer => {
+        const el = createLayerElement(layer);
+        els.recipeCard.appendChild(el);
+      });
+
+      renderLayersList();
+      syncLayerControlsFromSelection();
+    }
+
+    // =====================================================
+    // Drag / Resize Engine
+    // =====================================================
+    function getCardRectAndScale() {
+      const rect = els.recipeCard.getBoundingClientRect();
+      const scaleX = rect.width / CARD_W;
+      const scaleY = rect.height / CARD_H;
+      return { rect, scaleX, scaleY };
+    }
+
+    function pointerToCardCoords(clientX, clientY) {
+      const { rect, scaleX, scaleY } = getCardRectAndScale();
+      return {
+        x: (clientX - rect.left) / scaleX,
+        y: (clientY - rect.top) / scaleY
+      };
+    }
+
+    function onLayerMouseDown(e) {
+      const target = e.target;
+      const layerEl = e.currentTarget;
+      if (!(target instanceof HTMLElement) || !(layerEl instanceof HTMLElement)) return;
+
+      const c = layerEl.querySelector(".content");
+      // Don't interfere with toolbar or active editing
+      if (document.getElementById("richToolbar").contains(target)) return;
+      if (c && c.contentEditable === "true") return;
+
+      const id = layerEl.dataset.layerId;
+      const layer = getLayerById(id);
+      if (!layer) return;
+
+      // Don't call selectLayer (which re-renders) during potential dblclick
+      // Instead, just update state and toggle CSS class
+      state.selectedLayerId = id;
+      // Update visual selection without full re-render
+      els.recipeCard.querySelectorAll(".layer.selected").forEach(el => el.classList.remove("selected"));
+      layerEl.classList.add("selected");
+      syncLayerControlsFromSelection();
+      renderLayersList();
+
+      if (layer.locked) return;
+
+      const handle = target.dataset.handle;
+      const p = pointerToCardCoords(e.clientX, e.clientY);
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (handle) {
+        state.resize = {
+          layerId: id,
+          handle,
+          startPointer: p,
+          start: { x: layer.x, y: layer.y, w: layer.w, h: layer.h }
+        };
+      } else {
+        state.drag = {
+          layerId: id,
+          offsetX: p.x - layer.x,
+          offsetY: p.y - layer.y
+        };
+      }
+    }
+
+    function onMouseMove(e) {
+      if (!state.drag && !state.resize) return;
+      const p = pointerToCardCoords(e.clientX, e.clientY);
+
+      let showV = false, showH = false;
+
+      if (state.drag) {
+        const layer = getLayerById(state.drag.layerId);
+        if (!layer || layer.locked) return;
+
+        let nx = p.x - state.drag.offsetX;
+        let ny = p.y - state.drag.offsetY;
+
+        const lcx = nx + layer.w / 2;
+        const lcy = ny + layer.h / 2;
+
+        if (Math.abs(lcx - CARD_W / 2) <= SNAP_TOLERANCE) {
+          nx = CARD_W / 2 - layer.w / 2;
+          showV = true;
+        }
+        if (Math.abs(lcy - CARD_H / 2) <= SNAP_TOLERANCE) {
+          ny = CARD_H / 2 - layer.h / 2;
+          showH = true;
+        }
+
+        layer.x = nx;
+        layer.y = ny;
+        renderCardLayers();
+      }
+
+      if (state.resize) {
+        const layer = getLayerById(state.resize.layerId);
+        if (!layer || layer.locked) return;
+        const { start, startPointer, handle } = state.resize;
+
+        let dx = p.x - startPointer.x;
+        let dy = p.y - startPointer.y;
+
+        let x = start.x, y = start.y, w = start.w, h = start.h;
+
+        if (handle.includes("e")) w = start.w + dx;
+        if (handle.includes("s")) h = start.h + dy;
+        if (handle.includes("w")) { w = start.w - dx; x = start.x + dx; }
+        if (handle.includes("n")) { h = start.h - dy; y = start.y + dy; }
+
+        if (w < 20) { x -= (20 - w); w = 20; }
+        if (h < 20) { y -= (20 - h); h = 20; }
+
+        const lcx = x + w / 2;
+        const lcy = y + h / 2;
+        if (Math.abs(lcx - CARD_W / 2) <= SNAP_TOLERANCE) showV = true;
+        if (Math.abs(lcy - CARD_H / 2) <= SNAP_TOLERANCE) showH = true;
+
+        layer.x = x; layer.y = y; layer.w = w; layer.h = h;
+        renderCardLayers();
+      }
+
+      showGuides(showV, showH);
+    }
+
+    function onMouseUp() {
+      const wasDraggingOrResizing = (state.drag !== null || state.resize !== null);
+      state.drag = null;
+      state.resize = null;
+      showGuides(false, false);
+      syncLayerControlsFromSelection();
+      if (wasDraggingOrResizing) {
+        saveState();
+      }
+    }
+
+    els.recipeCard.addEventListener("mousedown", (e) => {
+      if (e.target === els.recipeCard || e.target === els.hero || (e.target instanceof HTMLElement && e.target.classList.contains("guide"))) {
+        clearSelection();
+      }
+    });
+
+    // =====================================================
+    // Delegated dblclick for inline text editing
+    // =====================================================
+    els.recipeCard.addEventListener("dblclick", (e) => {
+      const layerEl = e.target.closest(".layer");
+      if (!layerEl) return;
+
+      const layerId = layerEl.dataset.layerId;
+      const layer = getLayerById(layerId);
+      if (!layer) return;
+      if (layer.locked || layer.type === "macro" || layer.type === "shape") return;
+
+      e.stopPropagation();
+      e.preventDefault();
+
+      const c = layerEl.querySelector(".content");
+      if (!c) return;
+
+      // Mark as selected
+      state.selectedLayerId = layerId;
+      layerEl.classList.add("selected");
+
+      // Enable editing
+      c.contentEditable = "true";
+      c.style.pointerEvents = "auto";
+      c.style.userSelect = "text";
+      c.style.webkitUserSelect = "text";
+      c.style.cursor = "text";
+
+      // Ensure focus and selection
+      setTimeout(() => {
+        c.focus();
+        try {
+          const range = document.createRange();
+          range.selectNodeContents(c);
+          range.collapse(false); // cursor at end
+          const sel = window.getSelection();
+          if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        } catch (err) { }
+      }, 10);
+
+      // Show rich toolbar
+      const bounds = layerEl.getBoundingClientRect();
+      const cardBounds = els.recipeCard.getBoundingClientRect();
+      const richToolbar = document.getElementById("richToolbar");
+      richToolbar.style.display = "flex";
+      richToolbar.style.left = (bounds.left - cardBounds.left) + "px";
+      richToolbar.style.top = Math.max(0, bounds.top - cardBounds.top - 45) + "px";
+
+      const finishEdit = (ev) => {
+        // If clicked inside the toolbar, don't finish editing
+        if (richToolbar.contains(ev.relatedTarget) || (ev.relatedTarget && ev.relatedTarget.closest && ev.relatedTarget.closest('#richToolbar'))) {
+          setTimeout(() => c.focus(), 0);
+          c.addEventListener("blur", finishEdit, { once: true });
+          return;
+        }
+
+        c.contentEditable = "false";
+        c.style.pointerEvents = "none";
+        c.style.userSelect = "none";
+        c.style.webkitUserSelect = "none";
+        c.style.cursor = "";
+
+        layer.text = c.innerHTML;
+
+        richToolbar.style.display = "none";
+        syncLayerControlsFromSelection();
+        saveState();
+      };
+      c.addEventListener("blur", finishEdit, { once: true });
+    });
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+
+    // =====================================================
+    // Rich Toolbar interactions
+    // =====================================================
+    const toolbar = document.getElementById("richToolbar");
+    toolbar.querySelectorAll("button").forEach(btn => {
+      btn.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        const cmd = btn.dataset.cmd;
+        if (cmd) document.execCommand(cmd, false, null);
+      });
+    });
+    const richFontSize = document.getElementById("richFontSize");
+    richFontSize.addEventListener("mousedown", (e) => e.preventDefault());
+    richFontSize.addEventListener("change", (e) => {
+      if (e.target.value) document.execCommand("fontSize", false, e.target.value);
+      // Restore focus
+      const layerEl = els.recipeCard.querySelector(`.layer[data-layer-id="${state.selectedLayerId}"]`);
+      if (layerEl) { const c = layerEl.querySelector(".content"); if (c && c.contentEditable === "true") c.focus(); }
+    });
+    const colorPicker = document.getElementById("richColorPicker");
+    colorPicker.addEventListener("input", (e) => {
+      document.execCommand("foreColor", false, e.target.value);
+    });
+    colorPicker.addEventListener("change", (e) => {
+      const layerEl = els.recipeCard.querySelector(`.layer[data-layer-id="${state.selectedLayerId}"]`);
+      if (layerEl) {
+        const c = layerEl.querySelector(".content");
+        if (c.contentEditable === "true") c.focus();
+      }
+    });
+
+    // =====================================================
+    // Layer controls events
+    // =====================================================
+    [
+      "lc_name", "lc_x", "lc_y", "lc_z", "lc_w", "lc_h", "lc_padding", "lc_fontSize",
+      "lc_lineHeight", "lc_radius", "lc_align", "lc_weight", "lc_fontFamily",
+      "lc_color", "lc_bgColor"
+    ].forEach(id => {
+      els[id].addEventListener("input", applyControlsToSelectedLayer);
+      els[id].addEventListener("change", applyControlsToSelectedLayer);
+    });
+
+    els.lc_lock.addEventListener("click", () => {
+      const layer = getLayerById(state.selectedLayerId);
+      if (!layer) return;
+      layer.locked = !layer.locked;
+      renderCardLayers();
+    });
+
+    els.lc_bringFront.addEventListener("click", () => {
+      const layer = getLayerById(state.selectedLayerId);
+      if (!layer) return;
+      bringLayerToFront(layer);
+      normalizeLayerZ();
+      renderCardLayers();
+    });
+
+    els.lc_sendBack.addEventListener("click", () => {
+      const layer = getLayerById(state.selectedLayerId);
+      if (!layer) return;
+      sendLayerToBack(layer);
+      normalizeLayerZ();
+      renderCardLayers();
+    });
+
+    els.lc_bgTransparent.addEventListener("click", () => {
+      const layer = getLayerById(state.selectedLayerId);
+      if (!layer) return;
+      layer.bgTransparent = !layer.bgTransparent;
+      if (!layer.bgTransparent && (!layer.bgColor || layer.bgColor === "transparent")) {
+        layer.bgColor = "#ece7e1";
+      }
+      renderCardLayers();
+    });
+
+    els.lc_resetLayer.addEventListener("click", () => {
+      const layer = getLayerById(state.selectedLayerId);
+      if (!layer) return;
+      resetLayerToDefault(layer);
+      renderCardLayers();
+    });
+
+    els.lc_applyText.addEventListener("click", () => {
+      const layer = getLayerById(state.selectedLayerId);
+      if (!layer || layer.type === "macro" || layer.type === "shape") return;
+      layer.text = els.lc_text.value;
+      renderCardLayers();
+      saveState();
+    });
+
+    els.lc_text.addEventListener("input", () => {
+      const layer = getLayerById(state.selectedLayerId);
+      if (!layer || layer.type === "macro" || layer.type === "shape") return;
+      layer.text = els.lc_text.value;
+
+      const layerEl = els.recipeCard.querySelector(`.layer[data-layer-id="${layer.id}"]`);
+      if (layerEl) {
+        const c = layerEl.querySelector(".content");
+        if (layer.type === "list") {
+          c.innerHTML = "";
+          const ul = document.createElement("ul");
+          ul.className = "ingredients-list";
+          const lines = (layer.text || "").split("\n").map(s => s.trim()).filter(Boolean);
+          lines.forEach(line => {
+            const li = document.createElement("li");
+            li.textContent = line;
+            ul.appendChild(li);
+          });
+          c.appendChild(ul);
+        } else {
+          c.textContent = layer.text || "";
+        }
+        if (layer.shape === "pill") autoShrinkTitle(layer, c);
+      }
+    });
+
+    els.lc_duplicate.addEventListener("click", () => {
+      const layer = getLayerById(state.selectedLayerId);
+      if (!layer) return;
+      duplicateLayer(layer);
+      saveState();
+    });
+
+    // =====================================================
+    // Style Copy/Paste
+    // =====================================================
+    els.lc_copyStyle.addEventListener("click", () => {
+      const layer = getLayerById(state.selectedLayerId);
+      if (!layer) return;
+      state.copiedStyle = {
+        fontSize: layer.fontSize,
+        fontWeight: layer.fontWeight,
+        fontFamily: layer.fontFamily,
+        color: layer.color,
+        lineHeight: layer.lineHeight,
+        textAlign: layer.textAlign,
+        padding: layer.padding
+      };
+      setStatus("Stil kopyalandı: " + layer.name, "ok");
+    });
+
+    els.lc_pasteStyle.addEventListener("click", () => {
+      const layer = getLayerById(state.selectedLayerId);
+      if (!layer || !state.copiedStyle) { setStatus("Önce bir stil kopyala.", "error"); return; }
+      Object.assign(layer, state.copiedStyle);
+      renderCardLayers();
+      saveState();
+      setStatus("Stil yapıştırıldı: " + layer.name, "ok");
+    });
+
+    // =====================================================
+    // Theme quick actions
+    // =====================================================
+    function applyThemeVariant(type) {
+      const black = "#171717";
+      const green = "#6a844a";
+      const targetKeys = new Set(["ingTitle", "prepTitle"]);
+      state.layers.forEach(l => {
+        if (targetKeys.has(l.key)) {
+          l.color = type === "green" ? green : black;
+        }
+      });
+      const servis = state.layers.find(l => l.key === "servisTitle");
+      if (servis) servis.color = black;
+      renderCardLayers();
+    }
+    els.themeBlackBtn.addEventListener("click", () => applyThemeVariant("black"));
+    els.themeGreenBtn.addEventListener("click", () => applyThemeVariant("green"));
+
+    // =====================================================
+    // API key utils
+    // =====================================================
+    function saveApiKey() {
+      localStorage.setItem("gemini_api_key_recipe_cards", els.apiKey.value.trim());
+      setStatus("API key localStorage'a kaydedildi.", "ok");
+    }
+    function loadApiKey() {
+      const key = localStorage.getItem("gemini_api_key_recipe_cards") || "";
+      if (key) {
+        els.apiKey.value = key;
+        setStatus("API key yüklendi.", "ok");
+      } else {
+        setStatus("Kayıtlı API key bulunamadı.", "");
+      }
+    }
+    function clearApiKey() {
+      localStorage.removeItem("gemini_api_key_recipe_cards");
+      els.apiKey.value = "";
+      setStatus("API key temizlendi.", "ok");
+    }
+
+    function saveState() {
+      localStorage.setItem("recipe_card_state", JSON.stringify({
+        recipe: state.recipe,
+        layers: state.layers,
+        generatedImageDataUrl: state.generatedImageDataUrl
+      }));
+    }
+
+    function loadState() {
+      try {
+        const s = localStorage.getItem("recipe_card_state");
+        if (s) {
+          const parsed = JSON.parse(s);
+          // Version check/Migration: if titleText is missing, it's a legacy template
+          if (parsed.layers && !parsed.layers.some(l => l.key === "titleText")) {
+            console.log("Legacy template detected, not loading layers to use new defaults.");
+            if (parsed.recipe) state.recipe = parsed.recipe;
+            return false;
+          }
+          if (parsed.recipe) state.recipe = parsed.recipe;
+          if (parsed.layers && parsed.layers.length > 0) state.layers = parsed.layers;
+          if (parsed.generatedImageDataUrl) state.generatedImageDataUrl = parsed.generatedImageDataUrl;
+          return true;
+        }
+      } catch (e) { console.error("Could not load state", e); }
+      return false;
+    }
+
+    function clearState() {
+      localStorage.removeItem("recipe_card_state");
+      state.layers = [];
+      state.generatedImageDataUrl = "";
+      init(true);
+      setStatus("Şablon sıfırlandı.", "ok");
+    }
+
+    // =====================================================
+    // Template Management (localStorage + GitHub)
+    // =====================================================
+    const GITHUB_OWNER = "mustafasacar35";
+    const GITHUB_REPO = "kart_hazirlayici";
+    const GITHUB_TEMPLATES_PATH = "templates";
+
+    function getGitHubPat() {
+      const pat = els.githubPat.value.trim();
+      if (!pat) {
+        const stored = localStorage.getItem("github_pat_recipe") || "";
+        if (stored) els.githubPat.value = stored;
+        return stored;
+      }
+      localStorage.setItem("github_pat_recipe", pat);
+      return pat;
+    }
+
+    function buildTemplateJson(name) {
+      return JSON.stringify({
+        templateName: name,
+        createdAt: new Date().toISOString(),
+        recipe: state.recipe,
+        layers: state.layers,
+        generatedImageDataUrl: state.generatedImageDataUrl || ""
+      }, null, 2);
+    }
+
+    function getAllTemplateNames() {
+      try {
+        return JSON.parse(localStorage.getItem("recipe_templates_list") || "[]");
+      } catch { return []; }
+    }
+
+    function refreshTemplateSelect() {
+      const names = getAllTemplateNames();
+      els.templateSelect.innerHTML = '<option value="">-- Şablon seç --</option>';
+      names.forEach(n => {
+        const opt = document.createElement("option");
+        opt.value = n; opt.textContent = n;
+        els.templateSelect.appendChild(opt);
+      });
+    }
+
+    function saveTemplate() {
+      const name = els.templateName.value.trim();
+      if (!name) { setStatus("Şablon adı boş olamaz.", "error"); return; }
+      const json = buildTemplateJson(name);
+      localStorage.setItem("tpl_" + name, json);
+      const list = getAllTemplateNames();
+      if (!list.includes(name)) list.push(name);
+      localStorage.setItem("recipe_templates_list", JSON.stringify(list));
+      localStorage.setItem("last_template_name", name);
+      refreshTemplateSelect();
+      els.templateSelect.value = name;
+      setStatus(`Şablon "${name}" kaydedildi.`, "ok");
+    }
+
+    function loadTemplate() {
+      const name = els.templateSelect.value;
+      if (!name) { setStatus("Bir şablon seç.", "error"); return; }
+      const raw = localStorage.getItem("tpl_" + name);
+      if (!raw) { setStatus("Şablon bulunamadı.", "error"); return; }
+      try {
+        const t = JSON.parse(raw);
+        if (t.recipe) state.recipe = t.recipe;
+        if (t.layers && t.layers.length) state.layers = t.layers;
+        if (t.generatedImageDataUrl) state.generatedImageDataUrl = t.generatedImageDataUrl;
+        els.templateName.value = t.templateName || name;
+        localStorage.setItem("last_template_name", name);
+        fillEditorsFromRecipe();
+        renderCardLayers();
+        renderHero();
+        setStatus(`Şablon "${name}" yüklendi.`, "ok");
+      } catch (e) { setStatus("Şablon yüklenemedi: " + e.message, "error"); }
+    }
+
+    function deleteTemplate() {
+      const name = els.templateSelect.value;
+      if (!name) { setStatus("Silinecek şablon seç.", "error"); return; }
+      if (!confirm(`"${name}" şablonunu silmek istediğinden emin misin?`)) return;
+      localStorage.removeItem("tpl_" + name);
+      let list = getAllTemplateNames().filter(n => n !== name);
+      localStorage.setItem("recipe_templates_list", JSON.stringify(list));
+      refreshTemplateSelect();
+      setStatus(`Şablon "${name}" silindi.`, "ok");
+    }
+
+    async function pushToGitHub() {
+      const pat = getGitHubPat();
+      if (!pat) { setStatus("GitHub PAT gerekli.", "error"); return; }
+      const name = els.templateName.value.trim();
+      if (!name) { setStatus("Şablon adı boş olamaz.", "error"); return; }
+      const fileName = name.replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ _-]/g, "").replace(/\s+/g, "_") + ".json";
+      const content = btoa(unescape(encodeURIComponent(buildTemplateJson(name))));
+      const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_TEMPLATES_PATH}/${fileName}`;
+
+      setStatus("GitHub'a gönderiliyor...", "");
+      try {
+        // Check if file exists (to get sha)
+        let sha = undefined;
+        try {
+          const existing = await fetch(apiUrl, { headers: { "Authorization": `Bearer ${pat}` } });
+          if (existing.ok) { sha = (await existing.json()).sha; }
+        } catch { }
+
+        const body = { message: `Update template: ${name}`, content };
+        if (sha) body.sha = sha;
+
+        const res = await fetch(apiUrl, {
+          method: "PUT",
+          headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.message || res.status); }
+        setStatus(`"${name}" GitHub'a gönderildi!`, "ok");
+      } catch (e) { setStatus("GitHub hatası: " + e.message, "error"); }
+    }
+
+    async function pullFromGitHub() {
+      const pat = getGitHubPat();
+      if (!pat) { setStatus("GitHub PAT gerekli.", "error"); return; }
+      setStatus("GitHub'dan şablonlar çekiliyor...", "");
+      try {
+        const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_TEMPLATES_PATH}`, {
+          headers: { "Authorization": `Bearer ${pat}` }
+        });
+        if (!res.ok) throw new Error("Klasör bulunamadı veya erişim hatası.");
+        const files = await res.json();
+        if (!Array.isArray(files)) throw new Error("Beklenen format değil.");
+
+        let count = 0;
+        for (const file of files) {
+          if (!file.name.endsWith(".json")) continue;
+          const fileRes = await fetch(file.download_url);
+          const tpl = await fileRes.json();
+          const tplName = tpl.templateName || file.name.replace(".json", "");
+          localStorage.setItem("tpl_" + tplName, JSON.stringify(tpl));
+          const list = getAllTemplateNames();
+          if (!list.includes(tplName)) { list.push(tplName); localStorage.setItem("recipe_templates_list", JSON.stringify(list)); }
+          count++;
+        }
+        refreshTemplateSelect();
+        setStatus(`${count} şablon GitHub'dan çekildi.`, "ok");
+      } catch (e) { setStatus("GitHub hatası: " + e.message, "error"); }
+    }
+
+    els.saveTemplateBtn.addEventListener("click", saveTemplate);
+    els.loadTemplateBtn.addEventListener("click", loadTemplate);
+    els.deleteTemplateBtn.addEventListener("click", deleteTemplate);
+    els.pushGithubBtn.addEventListener("click", pushToGitHub);
+    els.pullGithubBtn.addEventListener("click", pullFromGitHub);
+
+    // =====================================================
+    // Hero Upload & Reference Image
+    // =====================================================
+    els.heroUpload.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        state.generatedImageDataUrl = ev.target.result;
+        renderHero();
+        saveState();
+        setStatus("Hero görseli yüklendi.", "ok");
+      };
+      reader.readAsDataURL(file);
+    });
+
+    els.referenceUpload.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const apiKey = els.apiKey.value.trim();
+      if (!apiKey) { setStatus("Önce API key gir.", "error"); return; }
+
+      setStatus("Referans resim AI'ya gönderiliyor...", "");
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        try {
+          const base64 = ev.target.result.split(",")[1];
+          const mimeType = file.type || "image/jpeg";
+          const model = els.textModel.value.trim() || "gemini-2.5-flash";
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+          const body = {
+            contents: [{
+              role: "user", parts: [
+                { inlineData: { mimeType, data: base64 } },
+                { text: "Bu yemek fotoğrafından esinlenerek, bu yemeğin premium food photography tarzında çekilmiş bir versiyonunu tanımlayan İngilizce bir image prompt oluştur. Prompt'ta metin, logo veya watermark olmasın. Sadece prompt'u yaz, başka bir şey yazma." }
+              ]
+            }],
+            generationConfig: { temperature: 0.5 }
+          };
+
+          const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.error?.message || `API hatası (${res.status})`);
+
+          const promptText = data?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("\n").trim() || "";
+          if (!promptText) throw new Error("AI boş prompt döndü.");
+
+          state.recipe.imagePrompt = promptText;
+          els.imagePromptEditor.value = promptText;
+          setStatus("AI referans resimden ilham aldı! Şimdi 'AI Görsel Üret' butonuna basabilirsin.", "ok");
+        } catch (err) { setStatus("Referans hatası: " + err.message, "error"); }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // =====================================================
+    // Gemini text draft
+    // =====================================================
+    async function callGeminiTextDraft() {
+      const apiKey = els.apiKey.value.trim();
+      if (!apiKey) throw new Error("Önce Gemini API key gir.");
+      const model = els.textModel.value.trim() || "gemini-2.5-flash";
+      const dishName = els.dishName.value.trim();
+      const servings = els.servings.value.trim() || "4 kişilik";
+
+      if (!dishName) throw new Error("Yemek adı boş olamaz.");
+
+      const prompt = (els.textPromptTemplate.value || DEFAULT_TEXT_PROMPT_TEMPLATE)
+        .replaceAll("{{DISH_NAME}}", dishName)
+        .replaceAll("{{SERVINGS}}", servings);
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+      const body = {
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.6,
+          responseMimeType: "application/json"
+        }
+      };
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || `Gemini text API hata (${res.status})`);
+
+      const text = data?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("\n") || "";
+      if (!text) throw new Error("Gemini boş yanıt döndü.");
+
+      const parsed = safeJsonParse(text);
+
+      state.recipe = {
+        title: parsed.title || dishName,
+        servis: parsed.servis || servings,
+        macroTitle: parsed.macroTitle || "1 porsiyon için\nmakro değerleri",
+        macros: {
+          karbonhidrat: parsed?.macros?.karbonhidrat ?? "-",
+          protein: parsed?.macros?.protein ?? "-",
+          yag: parsed?.macros?.yag ?? "-",
+          kalori: parsed?.macros?.kalori ?? "-"
+        },
+        ingredients: Array.isArray(parsed.ingredients) ? parsed.ingredients : [],
+        preparation: parsed.preparation || "",
+        imagePrompt: parsed.imagePrompt || ""
+      };
+
+      els.dishName.value = state.recipe.title || dishName;
+      els.servings.value = state.recipe.servis || servings;
+
+      fillEditorsFromRecipe();
+      buildLayersFromRecipeIfNeeded(false);
+      renderCardLayers();
+      saveState();
+
+      return parsed;
+    }
+
+    // =====================================================
+    // Imagen generate
+    // =====================================================
+    async function callImagenGenerate(revisionText = "") {
+      const apiKey = els.apiKey.value.trim();
+      if (!apiKey) throw new Error("Önce Gemini API key gir.");
+      const model = els.imageModel.value.trim() || "imagen-4.0-generate-001";
+
+      updateRecipeFromEditors();
+
+      const userImagePrompt = state.recipe.imagePrompt || "";
+      if (!userImagePrompt) throw new Error("Önce AI Taslak Oluştur veya görsel prompt gir.");
+
+      const styleAddon = els.imageStylePrompt.value.trim();
+      let finalPrompt = styleAddon ? `${userImagePrompt}\n\nStyle requirements: ${styleAddon}` : userImagePrompt;
+      if (revisionText) finalPrompt += `\n\nRevision: ${revisionText}`;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:predict`;
+
+      const body = {
+        instances: [{ prompt: finalPrompt }],
+        parameters: {
+          sampleCount: 1,
+          aspectRatio: els.imageAspect.value || "16:9"
+        }
+      };
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey
+        },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || `Imagen API hata (${res.status})`);
+
+      let b64 = null;
+      if (Array.isArray(data?.predictions) && data.predictions[0]) {
+        const p = data.predictions[0];
+        b64 = p.bytesBase64Encoded || p.image?.imageBytes || p.imageBytes || null;
+      }
+      if (!b64 && Array.isArray(data?.generatedImages) && data.generatedImages[0]) {
+        b64 = data.generatedImages[0]?.image?.imageBytes || null;
+      }
+      if (!b64) {
+        console.warn("Imagen response:", data);
+        throw new Error("Görsel verisi alınamadı. Response formatı farklı olabilir.");
+      }
+
+      state.generatedImageDataUrl = base64ToDataUrl(b64, "image/png");
+      renderCardLayers();
+      saveState();
+      return data;
+    }
+
+    // =====================================================
+    // Render sync from editors
+    // =====================================================
+    function renderFromEditors() {
+      updateRecipeFromEditors();
+
+      const titleText = state.layers.find(l => l.key === "titleText");
+      const titlePill = state.layers.find(l => l.key === "titlePill");
+      const title = titleText || titlePill;
+      const ingList = state.layers.find(l => l.key === "ingList");
+      const servis = state.layers.find(l => l.key === "servisTitle");
+      const prepBody = state.layers.find(l => l.key === "prepBody");
+
+      if (title) title.text = state.recipe.title;
+      if (ingList) ingList.text = (state.recipe.ingredients || []).join("\n");
+      if (servis) servis.text = `Servis: ${state.recipe.servis}`;
+      if (prepBody) prepBody.text = state.recipe.preparation;
+
+      renderCardLayers();
+      saveState();
+    }
+
+    // =====================================================
+    // Download PNG
+    // =====================================================
+    async function downloadCardPng() {
+      const prevSelected = state.selectedLayerId;
+      state.selectedLayerId = null;
+      renderCardLayers();
+
+      const fileName = (state.recipe.title || els.dishName.value || "tarif-karti")
+        .toLowerCase()
+        .replace(/[^a-z0-9çğıöşü\s-]/gi, "")
+        .replace(/\s+/g, "-") + ".png";
+
+      setStatus("PNG hazırlanıyor...", "");
+      const dataUrl = await htmlToImage.toPng(els.recipeCard, {
+        cacheBust: true,
+        pixelRatio: 2
+      });
+
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = fileName;
+      a.click();
+
+      state.selectedLayerId = prevSelected;
+      renderCardLayers();
+      setStatus("PNG indirildi.", "ok");
+    }
+
+    // =====================================================
+    // Buttons wiring
+    // =====================================================
+    els.saveKeyBtn.addEventListener("click", saveApiKey);
+    els.loadKeyBtn.addEventListener("click", loadApiKey);
+    els.clearKeyBtn.addEventListener("click", clearApiKey);
+
+    els.generateDraftBtn.addEventListener("click", async () => {
+      try {
+        setStatus("AI tarif taslağı oluşturuluyor...", "");
+        els.generateDraftBtn.disabled = true;
+        await callGeminiTextDraft();
+        setStatus("AI taslak oluşturuldu. Katmanlar yerleşimi korunarak içerik güncellendi.", "ok");
+      } catch (e) {
+        console.error(e);
+        setStatus(e.message || "Taslak oluşturulamadı.", "error");
+      } finally {
+        els.generateDraftBtn.disabled = false;
+      }
+    });
+
+    els.generateImageBtn.addEventListener("click", async () => {
+      try {
+        setStatus("AI görsel üretiliyor... (biraz sürebilir)", "");
+        els.generateImageBtn.disabled = true;
+        await callImagenGenerate();
+        setStatus("AI görsel üretildi ve karta eklendi.", "ok");
+      } catch (e) {
+        console.error(e);
+        setStatus(e.message || "Görsel üretilemedi.", "error");
+      } finally {
+        els.generateImageBtn.disabled = false;
+      }
+    });
+
+    els.revisionImageBtn.addEventListener("click", async () => {
+      try {
+        const rev = els.imageRevisionPrompt.value.trim();
+        if (!rev) { setStatus("Revizyon notu boş olamaz.", "error"); return; }
+        setStatus("Revizyonlu görsel üretiliyor...", "");
+        els.revisionImageBtn.disabled = true;
+        await callImagenGenerate(rev);
+        setStatus("AI revizyonlu görsel üretildi ve karta eklendi.", "ok");
+      } catch (e) {
+        console.error(e);
+        setStatus(e.message || "Görsel üretilemedi.", "error");
+      } finally {
+        els.revisionImageBtn.disabled = false;
+      }
+    });
+
+    els.renderBtn.addEventListener("click", () => {
+      try {
+        renderFromEditors();
+        setStatus("Kart güncellendi.", "ok");
+      } catch (e) {
+        console.error(e);
+        setStatus(e.message || "Kart güncellenemedi.", "error");
+      }
+    });
+
+    els.downloadBtn.addEventListener("click", async () => {
+      try {
+        await downloadCardPng();
+      } catch (e) {
+        console.error(e);
+        setStatus(e.message || "PNG indirilemedi.", "error");
+      }
+    });
+
+    // =====================================================
+    // Keyboard shortcuts
+    // =====================================================
+    window.addEventListener("keydown", (e) => {
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+
+      const layer = getLayerById(state.selectedLayerId);
+      if (!layer || layer.locked) return;
+
+      let moved = false;
+      const step = e.shiftKey ? 10 : 1;
+
+      if (e.key === "ArrowLeft") { layer.x -= step; moved = true; }
+      if (e.key === "ArrowRight") { layer.x += step; moved = true; }
+      if (e.key === "ArrowUp") { layer.y -= step; moved = true; }
+      if (e.key === "ArrowDown") { layer.y += step; moved = true; }
+
+      if (moved) {
+        e.preventDefault();
+        renderCardLayers();
+      }
+
+      if (e.key === "Delete" && layer.name.includes("(Kopya)")) {
+        state.layers = state.layers.filter(l => l.id !== layer.id);
+        state.selectedLayerId = null;
+        normalizeLayerZ();
+        renderCardLayers();
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        duplicateLayer(layer);
+      }
+    });
+
+    // =====================================================
+    // Init
+    // =====================================================
+    function init(forceDefault = false) {
+      els.textPromptTemplate.value = DEFAULT_TEXT_PROMPT_TEMPLATE.trim();
+      loadApiKey();
+
+      // Load GitHub PAT
+      const storedPat = localStorage.getItem("github_pat_recipe") || "";
+      if (storedPat) els.githubPat.value = storedPat;
+
+      // Try to load last template first
+      const lastTpl = localStorage.getItem("last_template_name");
+      let loaded = false;
+
+      if (!forceDefault && lastTpl) {
+        const raw = localStorage.getItem("tpl_" + lastTpl);
+        if (raw) {
+          try {
+            const t = JSON.parse(raw);
+            if (t.recipe) state.recipe = t.recipe;
+            if (t.layers && t.layers.length) state.layers = t.layers;
+            if (t.generatedImageDataUrl) state.generatedImageDataUrl = t.generatedImageDataUrl;
+            els.templateName.value = t.templateName || lastTpl;
+            loaded = true;
+          } catch { }
+        }
+      }
+
+      if (!loaded && !forceDefault) loaded = loadState();
+
+      if (!loaded) {
+        state.recipe = {
+          title: els.dishName.value.trim(),
+          servis: "4 kişilik",
+          macroTitle: "1 porsiyon için\nmakro değerleri",
+          macros: {
+            karbonhidrat: "5 gram",
+            protein: "7 gram",
+            yag: "28 gram",
+            kalori: "300 kcal"
+          },
+          ingredients: [
+            "1 su bardağı (yaklaşık 100g) badem unu",
+            "Yarım su bardağı eritritol veya başka bir keto tatlandırıcı",
+            "80 gram eritilmiş tereyağı veya hindistan cevizi yağı",
+            "1 adet büyük boy yumurta",
+            "1 çay kaşığı vanilya özütü",
+            "Yarım çay kaşığı kabartma tozu",
+            "Bir tutam tuz",
+            "İsteğe bağlı: Yarım su bardağı şekersiz çikolata damlası"
+          ],
+          preparation: "Fırını 175°C'ye ısıtın. Geniş bir kapta badem unu, eritritol, kabartma tozu ve tuzu karıştırın. Ayrı bir kapta eritilmiş tereyağı, yumurta ve vanilya özütünü çırpın. Islak karışımı kuru karışıma ekleyin ve homojen bir hamur elde edene kadar karıştırın. İsteğe bağlı olarak şekersiz çikolata damlalarını ekleyip karıştırın. Yağlı kağıt serilmiş fırın tepsisine kaşık yardımıyla veya elinizle küçük toplar halinde hamurdan alıp hafifçe bastırarak kurabiyeler oluşturun. Önceden ısıtılmış fırında kenarları hafifçe kızarana kadar yaklaşık 10-12 dakika pişirin. Fırından çıkardıktan sonra tepside birkaç dakika soğumaya bırakın, ardından tel ızgara üzerine alarak tamamen soğutun. Afiyet olsun!",
+          imagePrompt: "A plate of keto cookies made with almond flour and sugar-free chocolate chips, golden-brown, crackled surface, premium food photography, cozy natural light, close-up, appetizing composition, no text, no watermark."
+        };
+      }
+
+      fillEditorsFromRecipe();
+      buildLayersFromRecipeIfNeeded(!loaded || forceDefault);
+      renderCardLayers();
+      renderHero();
+      refreshTemplateSelect();
+
+      els.guideVCenter.style.left = `${CARD_W / 2}px`;
+      els.guideHCenter.style.top = `${CARD_H / 2}px`;
+    }
+
+    init();
+  </script>
+</body>
+
+</html>
