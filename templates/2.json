@@ -1,6 +1,6 @@
 {
   "templateName": "2",
-  "createdAt": "2026-02-25T10:56:56.523Z",
+  "createdAt": "2026-02-25T10:57:06.401Z",
   "recipe": {
     "title": "Ketojenik Kurabiye",
     "servis": "4 kişilik",
@@ -93,7 +93,7 @@
       "name": "Malzemeler Liste",
       "type": "list",
       "text": "1 su bardağı (yaklaşık 100g) badem unu\nYarım su bardağı eritritol veya başka bir keto tatlandırıcı\n80 gram eritilmiş tereyağı veya hindistan cevizi yağı\n1 adet büyük boy yumurta\n1 çay kaşığı vanilya özütü\nYarım çay kaşığı kabartma tozu\nBir tutam tuz\nİsteğe bağlı: Yarım su bardağı şekersiz çikolata damlası",
-      "x": 85,
+      "x": 70,
       "y": 742,
       "w": 620,
       "h": 390,
