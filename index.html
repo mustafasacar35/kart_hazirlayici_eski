@@ -3380,23 +3380,18 @@ Servis sayısı: {{SERVINGS}}
       setStatus("GitHub'a gönderiliyor...", "");
       try {
         let body = { message: `Update template: ${name}`, content };
+
+        // Önce dosyanın var olup olmadığını kontrol et (422 Unprocessable Content hatasını önlemek için)
+        const existing = await fetch(apiUrl, { headers: { "Authorization": `Bearer ${pat}` } });
+        if (existing.ok) {
+          body.sha = (await existing.json()).sha;
+        }
+
         let res = await fetch(apiUrl, {
           method: "PUT",
           headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
           body: JSON.stringify(body)
         });
-
-        if (res.status === 409 || res.status === 422) {
-          const existing = await fetch(apiUrl, { headers: { "Authorization": `Bearer ${pat}` } });
-          if (existing.ok) {
-            body.sha = (await existing.json()).sha;
-            res = await fetch(apiUrl, {
-              method: "PUT",
-              headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
-              body: JSON.stringify(body)
-            });
-          }
-        }
 
         if (!res.ok) throw new Error("GitHub yükleme hatası.");
         setStatus(`"${name}" GitHub'a gönderildi!`, "ok");
@@ -4249,8 +4244,14 @@ Aynı zamanda her biri için tahmini makro değerlerini de (Kalori, Karbonhidrat
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!text) return null;
 
-        // Since we enforced application/json, it should be a pure JSON string.
-        return JSON.parse(text);
+        // Metin içinden sadece [...] şeklindeki JSON dizisini RegEx ile kopar
+        let cleanText = text.replace(/```json/g, "").replace(/```/g, "").trim();
+        const arrayMatch = cleanText.match(/\[[\s\S]*\]/);
+        if (arrayMatch) {
+          cleanText = arrayMatch[0];
+        }
+
+        return JSON.parse(cleanText);
       } catch (e) {
         console.error("AI Dish Suggestion Parse Error:", e);
         return null;
