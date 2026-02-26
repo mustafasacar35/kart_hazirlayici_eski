@@ -5,7 +5,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Tarif Kartı Üretici - Layer Editor (Gemini + Imagen)</title>
-  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
+  <div id="draftModal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" id="closeDraftModal">&times;</span>
+      <h3>📂 Taslak Galerisi</h3>
+      <div class="small" style="margin-bottom:10px">Yapay zeka ile üretilen tüm varyasyonlar arka planda minik
+        halleriyle kaydedilir.</div>
+      <div id="draftStatus" class="small" style="color:#666">Yükleniyor...</div>
+      <div id="draftGrid" class="draft-grid"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
   <style>
     :root {
       --bg: #f3f1ee;
@@ -13,6 +24,7 @@
       --text: #171717;
       --muted: #666;
       --accent: #6a844a;
+      --primary: #2c6e49;
       --border: #ddd6cf;
       --danger: #b00020;
       --guide: #4aa3ff;
@@ -49,7 +61,7 @@
       background: #fff;
       border: 1px solid #ece7e1;
       border-radius: 16px;
-      padding: 14px;
+      padding: 10px;
       box-shadow: 0 6px 20px rgba(0, 0, 0, .04);
       position: sticky;
       top: 12px;
@@ -59,7 +71,7 @@
 
     .panel h1,
     .panel h2 {
-      margin: 0 0 10px;
+      margin: 0 0 6px;
       line-height: 1.2;
     }
 
@@ -72,7 +84,7 @@
     }
 
     .group {
-      margin-bottom: 10px
+      margin-bottom: 6px
     }
 
     .group label {
@@ -173,7 +185,187 @@
     hr.sep {
       border: none;
       border-top: 1px solid #eee;
-      margin: 12px 0;
+      margin: 8px 0;
+    }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      padding-top: 50px;
+    }
+
+    .modal-content {
+      background: #fff;
+      margin: 5% auto;
+      padding: 30px;
+      border-radius: 16px;
+      width: 80%;
+      max-width: 900px;
+      position: relative;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 24px;
+      cursor: pointer;
+      color: #777;
+    }
+
+    .draft-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .draft-card {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #fafafa;
+    }
+
+    .draft-card:hover {
+      border-color: #1a63d9;
+      box-shadow: 0 4px 12px rgba(26, 99, 217, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .draft-card img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .draft-card .info {
+      padding: 10px;
+      font-size: 12px;
+    }
+
+    .draft-card .d-name {
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
+    .draft-card .d-date {
+      color: #888;
+    }
+
+    .accordion {
+      border: 1px solid #dcd7cf;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    }
+
+    .accordion summary {
+      padding: 10px 14px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      background: #efeee9;
+      color: #4c4637;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      transition: background 0.2s;
+    }
+
+    .accordion summary:hover {
+      background: #e5e3db;
+    }
+
+    .accordion[open] summary {
+      background: var(--primary);
+      color: #fff;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .accordion summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .accordion summary::before {
+      content: '▸';
+      display: inline-block;
+      margin-right: 8px;
+      transition: transform .2s;
+    }
+
+    .accordion[open] summary::before {
+      transform: rotate(90deg);
+    }
+
+    .acc-body {
+      padding: 12px;
+      background: #fff;
+    }
+
+    /* Progress Banner */
+    .progress-banner {
+      display: none;
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 10px;
+      background: #f0f7ff;
+      border: 1px solid #d0e7ff;
+      color: #0052cc;
+      font-size: 13px;
+      font-weight: 600;
+      align-items: center;
+      gap: 10px;
+      animation: fadeIn 0.3s;
+    }
+
+    .progress-banner.active {
+      display: flex;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #0052cc;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
     }
 
     .preview-wrap {
@@ -224,6 +416,56 @@
       height: 520px;
       background: #ddd center/cover no-repeat;
       z-index: 1;
+    }
+
+    .hero.editing {
+      cursor: grab;
+      outline: 3px dashed var(--select);
+      outline-offset: -3px;
+    }
+
+    .hero.editing:active {
+      cursor: grabbing;
+    }
+
+    .hero-zoom-bar {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 20px;
+      padding: 6px 14px;
+      align-items: center;
+      gap: 8px;
+      z-index: 100;
+    }
+
+    .hero-zoom-bar.active {
+      display: flex;
+    }
+
+    .hero-zoom-bar label {
+      color: #fff;
+      font-size: 11px;
+      margin: 0;
+    }
+
+    .hero-zoom-bar input[type=range] {
+      width: 120px;
+      border: none;
+      padding: 0;
+    }
+
+    .hero-zoom-bar button {
+      width: auto;
+      padding: 4px 10px;
+      font-size: 11px;
+      border-radius: 6px;
+      background: #fff;
+      color: #333;
+      border: none;
     }
 
     .layer {
@@ -529,6 +771,116 @@
       border: 1px solid #ddd;
       border-radius: 4px;
     }
+
+    .selection-box {
+      position: absolute;
+      border: 2px dashed var(--select);
+      background: rgba(0, 132, 255, 0.08);
+      z-index: 9999;
+      pointer-events: none;
+    }
+
+    .align-bar {
+      display: none;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+      padding: 6px;
+      background: #eef3ff;
+      border-radius: 8px;
+      border: 1px solid #d0dbf0;
+    }
+
+    .align-bar.visible {
+      display: flex;
+    }
+
+    .align-bar button {
+      flex: 1;
+      min-width: 40px;
+      padding: 4px 2px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .align-bar button:hover {
+      background: #dbeafe;
+      border-color: var(--select);
+    }
+
+    /* Relative adjustment buttons */
+    .rel-btn-group {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .rel-btn-group input {
+      flex: 1;
+      text-align: center;
+      padding: 4px 2px;
+    }
+
+    .rel-btn {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: 1px solid #ccc;
+      background: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 14px;
+      color: #666;
+      flex-shrink: 0;
+    }
+
+    .rel-btn:hover {
+      background: #f0f0f0;
+      border-color: #999;
+      color: #333;
+    }
+
+    /* Autocomplete dropdown styles */
+    .autocomplete-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      max-height: 200px;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      display: none;
+    }
+
+    .autocomplete-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+
+    .autocomplete-item:hover,
+    .autocomplete-item.active {
+      background: #f0f7ff;
+      color: #0052cc;
+      font-weight: 500;
+    }
   </style>
 </head>
 
@@ -536,40 +888,25 @@
   <div class="app">
     <!-- SOL PANEL -->
     <aside class="panel left-panel">
-      <h1>AI Tarif Kartı Üretici</h1>
-      <div class="small">
-        Lokal kullanım için. API anahtarını arayüzden girersin. (Yayınlamadan önce frontend’e key gömmeyin.)
-      </div>
+      <h1 style="margin-bottom:12px; display:flex; align-items:center; gap:8px">
+        <span>🎨 AI Tarif Kartı</span>
+      </h1>
 
-      <div class="group" style="margin-top:10px">
-        <label>Gemini API Key</label>
-        <input id="apiKey" type="password" placeholder="AIza..." />
-        <div class="small">İstersen localStorage’a kaydeder.</div>
-      </div>
-
-      <div class="row">
-        <div class="group">
-          <label>Metin modeli</label>
-          <input id="textModel" value="gemini-2.5-flash" />
-        </div>
-        <div class="group">
-          <label>Görsel modeli (Imagen)</label>
-          <input id="imageModel" value="imagen-4.0-generate-001" />
-        </div>
-      </div>
-
-      <div class="group">
-        <label>Yemek adı</label>
-        <input id="dishName" value="Ketojenik Kurabiye" />
+      <!-- ESSENTIALS AT TOP -->
+      <div class="group" style="position:relative;">
+        <label>Dish Name / Yemek Adı</label>
+        <input id="dishName" value="Ketojenik Kurabiye" style="font-weight:700; border-color:var(--primary)"
+          autocomplete="off" />
+        <div id="dishAutocomplete" class="autocomplete-list"></div>
       </div>
 
       <div class="row">
         <div class="group">
-          <label>Servis (porsiyon/kişi vb.)</label>
+          <label>Servis</label>
           <input id="servings" type="text" value="4 kişilik" />
         </div>
         <div class="group">
-          <label>Kart oranı için görsel</label>
+          <label>Görsel Oranı</label>
           <select id="imageAspect">
             <option value="16:9" selected>16:9</option>
             <option value="4:3">4:3</option>
@@ -578,144 +915,268 @@
         </div>
       </div>
 
-      <div class="group">
-        <label>AI metin prompt şablonu (opsiyonel düzenle)</label>
-        <textarea id="textPromptTemplate"></textarea>
+      <hr class="sep">
+
+      <!-- MAGIC GENERATE AREA -->
+      <div class="group"
+        style="background:#fffcf5; border:1px solid #f9f0d5; padding:10px; border-radius:12px; margin-bottom:12px">
+        <label style="color:#856404; font-weight:700">✨ Magic AI Generate</label>
+
+        <div class="group" style="margin-top:6px">
+          <label style="font-size:11px">AI'ya ne ekletmek istersin? (Metin için)</label>
+          <input id="magicTextPrompt" placeholder="Örn: Glutensiz bir versiyon olsun..." />
+        </div>
+
+        <div class="group">
+          <label style="font-size:11px">Görsel için özel istek?</label>
+          <input id="magicImagePrompt" placeholder="Örn: Üstünde çikolata parçaları olsun..." />
+        </div>
+
+        <button id="magicBtn" class="btn-primary"
+          style="width:100%; height:44px; font-size:15px; background:linear-gradient(135deg, #2c6e49, #4c956c); border:none; box-shadow:0 4px 12px rgba(44,110,73,0.3)">
+          🚀 Tek Tıkla Kartı Oluştur
+        </button>
       </div>
 
-      <div class="group">
-        <label>AI görsel stil prompt eki</label>
-        <textarea
-          id="imageStylePrompt">Photorealistic Turkish food photography, appetizing, premium plating, clean composition, top/front angle suitable for a horizontal recipe card hero image, warm natural light, no text, no watermark, no hands, no utensils touching food, high detail.</textarea>
+      <!-- PROGRESS BANNER -->
+      <div id="progressBanner" class="progress-banner">
+        <div class="spinner"></div>
+        <span id="progressText">Yükleniyor...</span>
       </div>
 
-      <div class="row">
-        <button id="saveKeyBtn">API Key Kaydet</button>
-        <button id="loadKeyBtn">API Key Yükle</button>
-        <button id="clearKeyBtn" class="btn-danger">Key Temizle</button>
+      <div class="row" style="margin-top:4px; margin-bottom:12px">
+        <button id="renderBtn" style="flex:1">Kartı Güncelle</button>
+        <button id="downloadBtn" style="flex:1">PNG İndir</button>
       </div>
 
-      <div class="group" style="margin-top:8px">
-        <label>GitHub PAT (şablon sync için)</label>
-        <input id="githubPat" type="password" placeholder="ghp_..." />
-        <div class="small">mustafasacar35/kart_hazirlayici repo'suna erişim için.</div>
+      <!-- STEP 2: REFINEMENT & REVISION -->
+      <div class="group"
+        style="background:#f0f7ff; border:1px solid #d0e7ff; padding:10px; border-radius:12px; margin-bottom:12px">
+        <label style="color:#0052cc; font-weight:700">🔄 Step 2: Revizyon & Detaylar</label>
+
+        <div class="group" style="margin-top:6px">
+          <label style="font-size:11px">Görsel Revizyon Notu (Beğenmezsen buraya yaz)</label>
+          <textarea id="imageRevisionPrompt" style="min-height:50px; font-size:12px"
+            placeholder="Örn: Daha fazla çikolata olsun, ışık daha sıcak olsun..."></textarea>
+          <button id="revisionImageBtn" class="btn-accent"
+            style="width:100%; margin-top:4px; background:#0052cc; border:none; color:#fff">
+            🎨 Revizyonlu Üret
+          </button>
+        </div>
+
+        <div class="group">
+          <label style="font-size:11px">Veya kendi referans resmini yükle:</label>
+          <input type="file" id="referenceUpload" accept="image/*" />
+        </div>
       </div>
+
+      <!-- LIPODEM EXPORT ACCORDION MOVED HERE -->
+      <details class="accordion">
+        <summary>📤 Lipodem Paneline Aktar</summary>
+        <div class="acc-body">
+          <div class="small" style="margin-bottom:8px">Karar verilmiş, son halindeki kartı doğrudan sisteminize
+            (lipodem-takip-paneli) JPG olarak kaydeder.</div>
+          <div class="group">
+            <label>Dosya Adı (Otomatik önerilir)</label>
+            <input id="lipodemFileName" placeholder="örn: keto_kurabiye" />
+            <div class="mini">Sonuna .jpg otomatik eklenecektir.</div>
+          </div>
+          <div class="group">
+            <label>Etiketler (Tag'ler) - Virgülle ayırın</label>
+            <input id="lipodemTags" placeholder="örn: keto, tatlı, fırın" />
+          </div>
+          <div class="row" style="margin-top:10px">
+            <button id="exportLipodemBtn" class="btn-primary"
+              style="width:100%;font-size:14px;background:#5b1e6b;border-color:#4a1558">🚀 Lipodem Repo'suna
+              Gönder</button>
+          </div>
+        </div>
+      </details>
 
       <hr class="sep">
 
-      <h2>Şablon Yönetimi</h2>
-      <div class="group">
-        <label>Şablon adı</label>
-        <input id="templateName" placeholder="Örn: Keto Kurabiye Şablonu" />
-      </div>
-      <div class="row">
-        <button id="saveTemplateBtn" class="btn-primary">Şablonu Kaydet</button>
-        <button id="pushGithubBtn" class="btn-accent">GitHub'a Gönder</button>
-      </div>
-      <div class="group" style="margin-top:8px">
-        <label>Kayıtlı Şablonlar</label>
-        <select id="templateSelect">
-          <option value="">-- Şablon seç --</option>
-        </select>
-      </div>
-      <div class="row">
-        <button id="loadTemplateBtn">Şablon Yükle</button>
-        <button id="pullGithubBtn">GitHub'dan Çek</button>
-        <button id="deleteTemplateBtn" class="btn-danger">Sil</button>
-      </div>
+      <details class="accordion">
+        <summary>İçerik Editörü</summary>
+        <div class="acc-body">
+          <div class="group">
+            <label>Malzemeler (satır satır)</label>
+            <textarea id="ingredientsEditor"></textarea>
+          </div>
+          <div class="group">
+            <label>Hazırlama</label>
+            <textarea id="preparationEditor" style="min-height:130px"></textarea>
+          </div>
 
-      <hr class="sep">
+          <div class="group">
+            <label>Makro başlığı</label>
+            <textarea id="macroTitleEditor">1 porsiyon için
+makro değerleri</textarea>
+          </div>
 
-      <div class="row">
-        <button id="generateDraftBtn" class="btn-primary">1) AI Taslak Oluştur</button>
-        <button id="generateImageBtn" class="btn-accent">2) AI Görsel Üret</button>
-      </div>
+          <div class="group">
+            <label>Görsel prompt (AI draft sonrası gelir, istersen değiştir)</label>
+            <textarea id="imagePromptEditor" style="min-height:100px"></textarea>
+          </div>
 
-      <div class="group" style="margin-top:8px">
-        <label>Görsel Revizyon Notu</label>
-        <textarea id="imageRevisionPrompt" style="min-height:50px"
-          placeholder="Örn: Daha karanlık arka plan, üstten çekim..."></textarea>
-        <button id="revisionImageBtn" style="margin-top:4px">Revizyonlu Görsel Üret</button>
-      </div>
+          <div class="two-col">
+            <div class="group">
+              <label>Karbonhidrat</label>
+              <input id="carbEditor" value="-" />
+            </div>
+            <div class="group">
+              <label>Protein</label>
+              <input id="proteinEditor" value="-" />
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="group">
+              <label>Yağ</label>
+              <input id="fatEditor" value="-" />
+            </div>
+            <div class="group">
+              <label>Kalori</label>
+              <input id="kcalEditor" value="-" />
+            </div>
+          </div>
 
-      <div class="row" style="margin-top:8px">
-        <button id="renderBtn">3) Kartı Güncelle</button>
-        <button id="downloadBtn">PNG İndir</button>
-      </div>
+          <div class="mini">Not: Kartta görünen alanlar layer (katman) mantığında ayrı ayrı taşınabilir/düzenlenebilir.
+          </div>
+        </div>
+      </details>
 
-      <div class="group" style="margin-top:8px">
-        <label>Hero Görseli Yükle</label>
-        <input type="file" id="heroUpload" accept="image/*" />
-        <div class="small">Kendi fotoğrafını kartın üst alanına yükle.</div>
-      </div>
-      <div class="group">
-        <label>Referans Resim → AI İlham</label>
-        <input type="file" id="referenceUpload" accept="image/*" />
-        <div class="small">Yüklediğin resimden esinlenerek AI yeni bir görsel prompt oluşturur.</div>
-      </div>
+      <details class="accordion">
+        <summary>📂 GitHub & Şablon Yönetimi</summary>
+        <div class="acc-body">
+          <div class="group">
+            <label>Şablon adı</label>
+            <input id="templateName" placeholder="Örn: Keto Kurabiye Şablonu" />
+          </div>
+          <div class="row">
+            <button id="saveTemplateBtn" class="btn-soft" style="flex:1">💾 Kaydet</button>
+            <button id="pushGithubBtn" style="background:#2c6e49; color:#fff; flex:1">☁️ GitHub Save</button>
+          </div>
+          <div class="group" style="margin-top:8px">
+            <label>Kayıtlı Şablonlar</label>
+            <div class="row">
+              <select id="templateSelect" style="flex:1">
+                <option value="">-- Kart seç --</option>
+              </select>
+              <button id="refreshCardsBtn">↻</button>
+            </div>
+            <button id="loadTemplateBtn" style="width:100%; margin-top:4px">Yükle</button>
+          </div>
+          <div class="row" style="margin-top:4px">
+            <button id="deleteTemplateBtn" class="btn-danger" style="flex:1">Sil</button>
+            <button id="pullGithubBtn" style="flex:1">GitHub'dan Çek</button>
+          </div>
+          <button id="draftGalleryBtn"
+            style="width:100%; margin-top:8px; background:#fff3cd; color:#856404; border-color:#ffeeba;">📂 Taslak
+            Galerisi</button>
+          <div class="group" style="margin-top:12px">
+            <label>Hero Görseli Yükle</label>
+            <input type="file" id="heroUpload" accept="image/*" />
+          </div>
+        </div>
+      </details>
+
+      <details class="accordion">
+        <summary>⚙️ Style & Prompt Ayarları</summary>
+        <div class="acc-body">
+          <div class="group">
+            <label>AI Metin Şablonu</label>
+            <textarea id="textPromptTemplate" style="min-height:100px">Sen deneyimli bir beslenme odaklı tarif editörüsün.
+Kullanıcı için Türkçe bir tarif kartı taslağı üret.
+
+Kurallar:
+- Çıktıyı SADECE geçerli JSON olarak ver.
+- Açıklama, markdown, kod bloğu, ön söz yazma.
+- Makroları "1 porsiyon için" olacak şekilde yaklaşık ver.
+- Miktarları Türkçe ve pratik mutfak dilinde yaz.
+- Hazırlama metni akıcı, kartta kullanılabilecek doğal bir dille olsun.
+- Tarif kartı görseli için ayrıca İngilizce bir imagePrompt üret (food photography odaklı).
+- Görsel promptta yazı/logo/watermark olmasın.
+- Yemeğin sunumu iştah açıcı ve premium görünsün.
+
+Ek kural:
+- Servis sayısı 1 ise "1 kişilik", diğerlerinde "{n} kişilik" yaz.
+- Makro başlığı Türkçe doğal olsun (örn: "1 porsiyon için\nmakro değerleri").
+
+Beklenen JSON şeması:
+{
+  "title": "string",
+  "servis": "4 kişilik",
+  "macroTitle": "1 porsiyon için\nmakro değerleri",
+  "macros": {
+    "karbonhidrat": "12 gram",
+    "protein": "33 gram",
+    "yag": "35 gram",
+    "kalori": "495 kcal"
+  },
+  "ingredients": ["...", "..."],
+  "preparation": "string",
+  "imagePrompt": "English prompt for image generation"
+}
+
+Yemek adı: "{{DISH_NAME}}"
+Servis sayısı: {{SERVINGS}}</textarea>
+          </div>
+          <div class="group">
+            <label>Görsel Stil Eki</label>
+            <textarea
+              id="imageStylePrompt">Photorealistic Turkish food photography, appetizing, premium plating, clean composition, top/front angle, warm natural light, high detail.</textarea>
+          </div>
+
+          <div class="row" style="margin-top:12px">
+            <button id="generateDraftBtn" class="btn-soft" style="flex:1">AI Taslak Oluştur</button>
+            <button id="generateImageBtn" class="btn-primary" style="flex:1">AI Görsel Üret</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="accordion">
+        <summary>🔐 API & Model Ayarları</summary>
+        <div class="acc-body">
+          <div class="group">
+            <label>Gemini API Key</label>
+            <input id="apiKey" type="password" placeholder="AIza..." />
+          </div>
+          <div class="group">
+            <label>GitHub PAT</label>
+            <input id="githubPat" type="password" placeholder="ghp_..." />
+          </div>
+          <div class="row">
+            <div class="group">
+              <label>Metin Model</label>
+              <input id="textModel" value="gemini-2.5-flash" />
+            </div>
+            <div class="group">
+              <label>Görsel Model</label>
+              <input id="imageModel" value="imagen-4.0-generate-001" />
+            </div>
+          </div>
+          <div class="row">
+            <button id="saveKeyBtn" style="width:100%" class="btn-accent">🔑 API Anahtarlarını Kaydet</button>
+          </div>
+          <div class="row" style="margin-top:4px">
+            <button id="loadKeyBtn" style="flex:1">Yükle</button>
+            <button id="clearKeyBtn" class="btn-danger" style="flex:1">Temizle</button>
+          </div>
+        </div>
+      </details>
 
       <div id="status" class="status"></div>
-
-      <hr class="sep">
-
-      <h2>İçerik Editörü</h2>
-
-      <div class="group">
-        <label>Malzemeler (satır satır)</label>
-        <textarea id="ingredientsEditor"></textarea>
-      </div>
-      <div class="group">
-        <label>Hazırlama</label>
-        <textarea id="preparationEditor" style="min-height:130px"></textarea>
-      </div>
-
-      <div class="group">
-        <label>Makro başlığı</label>
-        <textarea id="macroTitleEditor">1 porsiyon için
-makro değerleri</textarea>
-      </div>
-
-      <div class="group">
-        <label>Görsel prompt (AI draft sonrası gelir, istersen değiştir)</label>
-        <textarea id="imagePromptEditor" style="min-height:100px"></textarea>
-      </div>
-
-      <div class="two-col">
-        <div class="group">
-          <label>Karbonhidrat</label>
-          <input id="carbEditor" value="-" />
-        </div>
-        <div class="group">
-          <label>Protein</label>
-          <input id="proteinEditor" value="-" />
-        </div>
-      </div>
-      <div class="two-col">
-        <div class="group">
-          <label>Yağ</label>
-          <input id="fatEditor" value="-" />
-        </div>
-        <div class="group">
-          <label>Kalori</label>
-          <input id="kcalEditor" value="-" />
-        </div>
-      </div>
-
-      <div class="mini">Not: Kartta görünen alanlar layer (katman) mantığında ayrı ayrı taşınabilir/düzenlenebilir.
-      </div>
     </aside>
 
     <!-- ORTA ÖNİZLEME -->
     <main class="preview-wrap">
-      <div class="card-toolbar">
-        <div class="pill">Kart önizleme (1080x1600)</div>
-        <div class="pill">Katman seç → sağ panelden düzenle</div>
-        <div class="pill">Sürükle-bırak + resize + lock + z-index</div>
-        <div class="pill">Hazırlama metninde justify kullan</div>
-      </div>
 
       <div id="recipeCard" class="recipe-card">
         <div id="hero" class="hero"></div>
+        <div id="heroZoomBar" class="hero-zoom-bar">
+          <label>Zoom</label>
+          <input type="range" id="heroZoom" min="100" max="300" value="100" />
+          <button id="heroEditDone">✓ Tamam</button>
+        </div>
 
         <!-- floating rich text toolbar -->
         <div id="richToolbar" class="rich-toolbar">
@@ -753,6 +1214,9 @@ makro değerleri</textarea>
 
     <!-- SAĞ PANEL: LAYER EDİTÖR -->
     <aside class="panel right-panel">
+      <div class="card-toolbar" style="margin-bottom:8px">
+        <div class="pill">Kart önizleme (1080×1600)</div>
+      </div>
       <h2>Katmanlar (Aşama 1 + Aşama 2)</h2>
       <div class="small">Her alan ayrı katman. Seç, taşı, boyutlandır, kilitle, öne/arkaya al.</div>
 
@@ -775,14 +1239,33 @@ makro değerleri</textarea>
           <button id="lc_sendBack" class="btn-soft">Arkaya Al</button>
         </div>
 
+        <div id="alignBar" class="align-bar">
+          <button data-align="left" title="Sola Hizala">⮆</button>
+          <button data-align="centerH" title="Yatay Ortala">↔</button>
+          <button data-align="right" title="Sağa Hizala">⮈</button>
+          <button data-align="top" title="Üste Hizala">⮇</button>
+          <button data-align="centerV" title="Dikey Ortala">↕</button>
+          <button data-align="bottom" title="Alta Hizala">⮉</button>
+          <button data-align="distH" title="Yatay Dağıt">┄</button>
+          <button data-align="distV" title="Dikey Dağıt">┆</button>
+        </div>
+
         <div class="three-col" style="margin-top:8px">
           <div class="group">
             <label>X</label>
-            <input id="lc_x" type="number" />
+            <div class="rel-btn-group">
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('x', -1)">-</button>
+              <input id="lc_x" type="number" />
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('x', 1)">+</button>
+            </div>
           </div>
           <div class="group">
             <label>Y</label>
-            <input id="lc_y" type="number" />
+            <div class="rel-btn-group">
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('y', -1)">-</button>
+              <input id="lc_y" type="number" />
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('y', 1)">+</button>
+            </div>
           </div>
           <div class="group">
             <label>Z</label>
@@ -793,30 +1276,54 @@ makro değerleri</textarea>
         <div class="three-col">
           <div class="group">
             <label>Genişlik</label>
-            <input id="lc_w" type="number" />
+            <div class="rel-btn-group">
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('w', -1)">-</button>
+              <input id="lc_w" type="number" />
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('w', 1)">+</button>
+            </div>
           </div>
           <div class="group">
             <label>Yükseklik</label>
-            <input id="lc_h" type="number" />
+            <div class="rel-btn-group">
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('h', -1)">-</button>
+              <input id="lc_h" type="number" />
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('h', 1)">+</button>
+            </div>
           </div>
           <div class="group">
             <label>Padding</label>
-            <input id="lc_padding" type="number" />
+            <div class="rel-btn-group">
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('padding', -1)">-</button>
+              <input id="lc_padding" type="number" />
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('padding', 1)">+</button>
+            </div>
           </div>
         </div>
 
         <div class="three-col">
           <div class="group">
             <label>Font boyutu</label>
-            <input id="lc_fontSize" type="number" />
+            <div class="rel-btn-group">
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('fontSize', -1)">-</button>
+              <input id="lc_fontSize" type="number" />
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('fontSize', 1)">+</button>
+            </div>
           </div>
           <div class="group">
             <label>Line-height</label>
-            <input id="lc_lineHeight" type="number" step="0.05" />
+            <div class="rel-btn-group">
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('lineHeight', -0.05, true)">-</button>
+              <input id="lc_lineHeight" type="number" step="0.05" />
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('lineHeight', 0.05, true)">+</button>
+            </div>
           </div>
           <div class="group">
             <label>Radius</label>
-            <input id="lc_radius" type="number" />
+            <div class="rel-btn-group">
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('radius', -1)">-</button>
+              <input id="lc_radius" type="number" />
+              <button class="rel-btn" onclick="changeLayerPropertyRelatively('radius', 1)">+</button>
+            </div>
           </div>
         </div>
 
@@ -963,12 +1470,19 @@ Servis sayısı: {{SERVINGS}}
         imagePrompt: ""
       },
       generatedImageDataUrl: "",
+      heroPosition: { x: 50, y: 50 },  // background-position %
+      heroZoom: 100,  // background-size %
+      referenceImageBase64: null,  // stored for revision use
+      referenceImageMime: null,
       layers: [],
       selectedLayerId: null,
+      selectedLayerIds: new Set(),
       drag: null,
       resize: null,
       clipboardLayer: null,
-      copiedStyle: null
+      copiedStyle: null,
+      history: [],
+      historyIndex: -1
     };
 
     // =====================================================
@@ -979,9 +1493,17 @@ Servis sayısı: {{SERVINGS}}
       textModel: document.getElementById("textModel"),
       imageModel: document.getElementById("imageModel"),
       dishName: document.getElementById("dishName"),
+      dishAutocomplete: document.getElementById("dishAutocomplete"),
       servings: document.getElementById("servings"),
       imageAspect: document.getElementById("imageAspect"),
       textPromptTemplate: document.getElementById("textPromptTemplate"),
+
+      // Drafts
+      draftGalleryBtn: document.getElementById("draftGalleryBtn"),
+      draftModal: document.getElementById("draftModal"),
+      closeDraftModal: document.getElementById("closeDraftModal"),
+      draftStatus: document.getElementById("draftStatus"),
+      draftGrid: document.getElementById("draftGrid"),
       imageStylePrompt: document.getElementById("imageStylePrompt"),
 
       saveKeyBtn: document.getElementById("saveKeyBtn"),
@@ -1050,10 +1572,25 @@ Servis sayısı: {{SERVINGS}}
       deleteTemplateBtn: document.getElementById("deleteTemplateBtn"),
       pushGithubBtn: document.getElementById("pushGithubBtn"),
       pullGithubBtn: document.getElementById("pullGithubBtn"),
+      refreshCardsBtn: document.getElementById("refreshCardsBtn"),
       heroUpload: document.getElementById("heroUpload"),
       referenceUpload: document.getElementById("referenceUpload"),
       imageRevisionPrompt: document.getElementById("imageRevisionPrompt"),
       revisionImageBtn: document.getElementById("revisionImageBtn"),
+      heroZoomBar: document.getElementById("heroZoomBar"),
+      heroZoom: document.getElementById("heroZoom"),
+
+      // Lipodem Export
+      lipodemFileName: document.getElementById("lipodemFileName"),
+      lipodemTags: document.getElementById("lipodemTags"),
+      exportLipodemBtn: document.getElementById("exportLipodemBtn"),
+
+      heroEditDone: document.getElementById("heroEditDone"),
+      magicBtn: document.getElementById("magicBtn"),
+      magicTextPrompt: document.getElementById("magicTextPrompt"),
+      magicImagePrompt: document.getElementById("magicImagePrompt"),
+      progressBanner: document.getElementById("progressBanner"),
+      progressText: document.getElementById("progressText")
     };
 
     // =====================================================
@@ -1065,13 +1602,33 @@ Servis sayısı: {{SERVINGS}}
     }
 
     function safeJsonParse(text) {
-      try { return JSON.parse(text); } catch (e) { }
-      const first = text.indexOf("{");
-      const last = text.lastIndexOf("}");
+      // Step 1: Strip markdown code fences if present
+      let cleaned = text.trim();
+      cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+
+      // Step 2: Try direct parse
+      try { return JSON.parse(cleaned); } catch (e) { }
+
+      // Step 3: Extract JSON object from surrounding text
+      const first = cleaned.indexOf("{");
+      const last = cleaned.lastIndexOf("}");
       if (first !== -1 && last !== -1 && last > first) {
-        return JSON.parse(text.slice(first, last + 1));
+        let jsonStr = cleaned.slice(first, last + 1);
+        // Remove trailing commas before ] or }
+        jsonStr = jsonStr.replace(/,\s*([\]\}])/g, "$1");
+        try { return JSON.parse(jsonStr); } catch (e2) { }
       }
-      throw new Error("JSON parse edilemedi.");
+
+      // Step 4: Try to extract JSON array
+      const firstArr = cleaned.indexOf("[");
+      const lastArr = cleaned.lastIndexOf("]");
+      if (firstArr !== -1 && lastArr !== -1 && lastArr > firstArr) {
+        let jsonStr = cleaned.slice(firstArr, lastArr + 1);
+        jsonStr = jsonStr.replace(/,\s*([\]\}])/g, "$1");
+        try { return JSON.parse(jsonStr); } catch (e3) { }
+      }
+
+      throw new Error("JSON parse edilemedi. AI yanıtı geçerli JSON değil.");
     }
 
     function base64ToDataUrl(base64, mime = "image/png") {
@@ -1187,7 +1744,7 @@ Servis sayısı: {{SERVINGS}}
           name: "Başlık Metni",
           type: "text",
           text: state.recipe.title || "Tarif Başlığı",
-          x: 48, y: 486, w: 984, h: 110,
+          x: 48, y: 511, w: 984, h: 60,
           z: 11,
           fontFamily: "serif",
           fontSize: 38,
@@ -1196,7 +1753,7 @@ Servis sayısı: {{SERVINGS}}
           color: "#171717",
           bgColor: "transparent",
           bgTransparent: true,
-          padding: 18,
+          padding: 0,
           textAlign: "center",
           locked: false
         },
@@ -1396,6 +1953,10 @@ Servis sayısı: {{SERVINGS}}
       } else {
         els.hero.style.backgroundImage = "linear-gradient(135deg,#ddd,#cfcfcf)";
       }
+      const pos = state.heroPosition || { x: 50, y: 50 };
+      const zoom = state.heroZoom || 100;
+      els.hero.style.backgroundPosition = `${pos.x}% ${pos.y}%`;
+      els.hero.style.backgroundSize = zoom === 100 ? 'cover' : `${zoom}%`;
     }
 
     function autoShrinkTitle(layer, contentEl) {
@@ -1454,7 +2015,7 @@ Servis sayısı: {{SERVINGS}}
       el.className = "layer";
       el.dataset.layerId = layer.id;
       if (layer.locked) el.classList.add("locked");
-      if (state.selectedLayerId === layer.id) el.classList.add("selected");
+      if (state.selectedLayerIds.has(layer.id)) el.classList.add("selected");
 
       const c = document.createElement("div");
       c.className = "content " + (layer.fontFamily === "serif" ? "serif" : "sans");
@@ -1525,6 +2086,8 @@ Servis sayısı: {{SERVINGS}}
       el.addEventListener("mousedown", onLayerMouseDown);
       el.addEventListener("click", (e) => {
         e.stopPropagation();
+        // Don't override shift+click multi-select from mousedown
+        if (e.shiftKey) return;
         selectLayer(layer.id);
       });
       // NOTE: dblclick is handled via event delegation on els.recipeCard
@@ -1539,7 +2102,7 @@ Servis sayısı: {{SERVINGS}}
       const sorted = [...state.layers].sort((a, b) => (b.z || 0) - (a.z || 0));
       sorted.forEach(layer => {
         const item = document.createElement("div");
-        item.className = "layer-item" + (layer.id === state.selectedLayerId ? " active" : "");
+        item.className = "layer-item" + (state.selectedLayerIds.has(layer.id) ? " active" : "");
         item.innerHTML = `
           <div class="name" title="${escapeHtml(layer.name)}">${escapeHtml(layer.name)}</div>
           <button class="icon-btn ${layer.locked ? "active" : ""}" data-act="lock">${layer.locked ? "🔒" : "🔓"}</button>
@@ -1571,6 +2134,10 @@ Servis sayısı: {{SERVINGS}}
 
     function syncLayerControlsFromSelection() {
       const layer = getLayerById(state.selectedLayerId);
+      // Show/hide alignment bar based on multi-select
+      const alignBar = document.getElementById("alignBar");
+      if (alignBar) alignBar.classList.toggle("visible", state.selectedLayerIds.size >= 2);
+
       if (!layer) {
         els.noSelectionMsg.style.display = "block";
         els.layerControls.style.display = "none";
@@ -1603,28 +2170,81 @@ Servis sayısı: {{SERVINGS}}
       const isMacro = layer.type === "macro";
       els.lc_text.disabled = isMacro;
       els.lc_applyText.disabled = isMacro;
-      els.lc_text.placeholder = isMacro ? "Makro kutusu içeriği soldaki makro alanlarından gelir." : "";
+      els.lc_text.placeholder = isMacro ? "Makro değerleri kart üzerinde çift tıklayarak düzenlenebilir." : "";
+
+      // Canva style: if multiple selected and values differ, show "-"
+      if (state.selectedLayerIds.size > 1) {
+        const layers = getSelectedLayers();
+        ["fontSize", "lineHeight", "padding", "x", "y", "w", "h", "radius"].forEach(p => {
+          const input = els["lc_" + p];
+          if (!input) return;
+          const first = layers[0][p];
+          const mismatch = layers.some(l => l[p] !== first);
+          if (mismatch) {
+            input.value = "";
+            input.placeholder = "-";
+          } else {
+            input.placeholder = "";
+          }
+        });
+      }
     }
 
-    function applyControlsToSelectedLayer() {
-      const layer = getLayerById(state.selectedLayerId);
-      if (!layer) return;
+    window.changeLayerPropertyRelatively = function (prop, delta, isFloat = false) {
+      const layers = getSelectedLayers();
+      if (layers.length === 0) return;
 
-      layer.name = els.lc_name.value || layer.name;
-      layer.x = clamp(Number(els.lc_x.value || 0), -1000, CARD_W + 1000);
-      layer.y = clamp(Number(els.lc_y.value || 0), -1000, CARD_H + 1000);
-      layer.z = Number(els.lc_z.value || layer.z || 1);
-      layer.w = clamp(Number(els.lc_w.value || 50), 20, 3000);
-      layer.h = clamp(Number(els.lc_h.value || 20), 20, 3000);
-      layer.padding = clamp(Number(els.lc_padding.value || 0), 0, 200);
-      layer.fontSize = clamp(Number(els.lc_fontSize.value || 16), 8, 200);
-      layer.lineHeight = clamp(Number(els.lc_lineHeight.value || 1.2), 0.6, 3);
-      layer.radius = clamp(Number(els.lc_radius.value || 0), 0, 200);
-      layer.textAlign = els.lc_align.value;
-      layer.fontWeight = els.lc_weight.value;
-      layer.fontFamily = els.lc_fontFamily.value;
-      layer.color = els.lc_color.value;
-      if (!layer.bgTransparent) layer.bgColor = els.lc_bgColor.value;
+      pushHistory();
+
+      layers.forEach(layer => {
+        let val = Number(layer[prop] || 0);
+        val += delta;
+
+        // Clamping logic
+        if (prop === 'fontSize') val = clamp(val, 8, 200);
+        if (prop === 'lineHeight') val = clamp(val, 0.6, 3);
+        if (prop === 'padding') val = clamp(val, 0, 200);
+        if (prop === 'radius') val = clamp(val, 0, 200);
+        if (prop === 'w' || prop === 'h') val = clamp(val, 20, 3000);
+
+        if (isFloat) {
+          layer[prop] = parseFloat(val.toFixed(2));
+        } else {
+          layer[prop] = Math.round(val);
+        }
+      });
+
+      syncLayerControlsFromSelection();
+      renderCardLayers();
+      saveState();
+    };
+
+    function applyControlsToSelectedLayer() {
+      const primaryLayer = getLayerById(state.selectedLayerId);
+      if (!primaryLayer) return;
+
+      pushHistory();
+
+      const layers = getSelectedLayers();
+      layers.forEach(layer => {
+        // Only apply if the input is NOT empty (Karışık/Mismatch state)
+        if (els.lc_name.value) layer.name = els.lc_name.value;
+        if (els.lc_x.value !== "") layer.x = clamp(Number(els.lc_x.value), -1000, CARD_W + 1000);
+        if (els.lc_y.value !== "") layer.y = clamp(Number(els.lc_y.value), -1000, CARD_H + 1000);
+        if (els.lc_z.value !== "") layer.z = Number(els.lc_z.value);
+        if (els.lc_w.value !== "") layer.w = clamp(Number(els.lc_w.value), 20, 3000);
+        if (els.lc_h.value !== "") layer.h = clamp(Number(els.lc_h.value), 20, 3000);
+        if (els.lc_padding.value !== "") layer.padding = clamp(Number(els.lc_padding.value), 0, 200);
+        if (els.lc_fontSize.value !== "") layer.fontSize = clamp(Number(els.lc_fontSize.value), 8, 200);
+        if (els.lc_lineHeight.value !== "") layer.lineHeight = clamp(Number(els.lc_lineHeight.value), 0.6, 3);
+        if (els.lc_radius.value !== "") layer.radius = clamp(Number(els.lc_radius.value), 0, 200);
+
+        layer.textAlign = els.lc_align.value;
+        layer.fontWeight = els.lc_weight.value;
+        layer.fontFamily = els.lc_fontFamily.value;
+        layer.color = els.lc_color.value;
+        if (!layer.bgTransparent) layer.bgColor = els.lc_bgColor.value;
+      });
 
       normalizeLayerZ();
       renderCardLayers();
@@ -1660,13 +2280,146 @@ Servis sayısı: {{SERVINGS}}
     }
 
     function selectLayer(id) {
-      if (state.selectedLayerId === id) return; // don't re-render if same
+      if (state.selectedLayerId === id && state.selectedLayerIds.size === 1) return;
       state.selectedLayerId = id;
+      state.selectedLayerIds.clear();
+      state.selectedLayerIds.add(id);
       renderCardLayers();
     }
 
     function clearSelection() {
       state.selectedLayerId = null;
+      state.selectedLayerIds.clear();
+      renderCardLayers();
+    }
+
+    // =====================================================
+    // Multi-select alignment
+    // =====================================================
+    function getSelectedLayers() {
+      return [...state.selectedLayerIds].map(id => getLayerById(id)).filter(Boolean);
+    }
+
+    function alignSelectedLayers(type) {
+      const layers = getSelectedLayers();
+      if (layers.length < 2) return;
+
+      switch (type) {
+        case 'left': {
+          const minX = Math.min(...layers.map(l => l.x));
+          layers.forEach(l => l.x = minX);
+          break;
+        }
+        case 'right': {
+          const maxRight = Math.max(...layers.map(l => l.x + l.w));
+          layers.forEach(l => l.x = maxRight - l.w);
+          break;
+        }
+        case 'centerH': {
+          const minX = Math.min(...layers.map(l => l.x));
+          const maxRight = Math.max(...layers.map(l => l.x + l.w));
+          const centerX = (minX + maxRight) / 2;
+          layers.forEach(l => l.x = centerX - l.w / 2);
+          break;
+        }
+        case 'top': {
+          const minY = Math.min(...layers.map(l => l.y));
+          layers.forEach(l => l.y = minY);
+          break;
+        }
+        case 'bottom': {
+          const maxBottom = Math.max(...layers.map(l => l.y + l.h));
+          layers.forEach(l => l.y = maxBottom - l.h);
+          break;
+        }
+        case 'centerV': {
+          const minY = Math.min(...layers.map(l => l.y));
+          const maxBottom = Math.max(...layers.map(l => l.y + l.h));
+          const centerY = (minY + maxBottom) / 2;
+          layers.forEach(l => l.y = centerY - l.h / 2);
+          break;
+        }
+        case 'distH': {
+          if (layers.length < 3) break;
+          const sorted = [...layers].sort((a, b) => a.x - b.x);
+          const first = sorted[0].x;
+          const last = sorted[sorted.length - 1].x + sorted[sorted.length - 1].w;
+          const totalW = sorted.reduce((s, l) => s + l.w, 0);
+          const gap = (last - first - totalW) / (sorted.length - 1);
+          let cx = first;
+          sorted.forEach(l => { l.x = cx; cx += l.w + gap; });
+          break;
+        }
+        case 'distV': {
+          if (layers.length < 3) break;
+          const sorted = [...layers].sort((a, b) => a.y - b.y);
+          const first = sorted[0].y;
+          const last = sorted[sorted.length - 1].y + sorted[sorted.length - 1].h;
+          const totalH = sorted.reduce((s, l) => s + l.h, 0);
+          const gap = (last - first - totalH) / (sorted.length - 1);
+          let cy = first;
+          sorted.forEach(l => { l.y = cy; cy += l.h + gap; });
+          break;
+        }
+      }
+      renderCardLayers();
+      saveState();
+    }
+
+    // Wire alignment buttons
+    document.getElementById("alignBar").querySelectorAll("button[data-align]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        pushHistory();
+        alignSelectedLayers(btn.dataset.align);
+      });
+    });
+
+    // =====================================================
+    // Undo / Redo history stack
+    // =====================================================
+    const MAX_HISTORY = 50;
+
+    function pushHistory() {
+      // Snapshot layers positions/sizes
+      const snapshot = state.layers.map(l => ({
+        id: l.id, x: l.x, y: l.y, w: l.w, h: l.h, z: l.z,
+        text: l.text, fontSize: l.fontSize, color: l.color,
+        bgColor: l.bgColor, bgTransparent: l.bgTransparent,
+        fontWeight: l.fontWeight, fontFamily: l.fontFamily,
+        textAlign: l.textAlign, lineHeight: l.lineHeight,
+        padding: l.padding, radius: l.radius, locked: l.locked, name: l.name
+      }));
+      // Trim future states if we're not at the end
+      if (state.historyIndex < state.history.length - 1) {
+        state.history = state.history.slice(0, state.historyIndex + 1);
+      }
+      state.history.push(snapshot);
+      if (state.history.length > MAX_HISTORY) state.history.shift();
+      state.historyIndex = state.history.length - 1;
+    }
+
+    function undoHistory() {
+      if (state.historyIndex <= 0) { setStatus("Geri alınacak işlem yok.", ""); return; }
+      state.historyIndex--;
+      restoreHistory();
+      setStatus(`Geri alındı (${state.historyIndex + 1}/${state.history.length})`, "ok");
+    }
+
+    function redoHistory() {
+      if (state.historyIndex >= state.history.length - 1) { setStatus("İleri alınacak işlem yok.", ""); return; }
+      state.historyIndex++;
+      restoreHistory();
+      setStatus(`İleri alındı (${state.historyIndex + 1}/${state.history.length})`, "ok");
+    }
+
+    function restoreHistory() {
+      const snapshot = state.history[state.historyIndex];
+      if (!snapshot) return;
+      snapshot.forEach(snap => {
+        const layer = getLayerById(snap.id);
+        if (!layer) return;
+        Object.assign(layer, snap);
+      });
       renderCardLayers();
     }
 
@@ -1716,12 +2469,39 @@ Servis sayısı: {{SERVINGS}}
       const layer = getLayerById(id);
       if (!layer) return;
 
-      // Don't call selectLayer (which re-renders) during potential dblclick
-      // Instead, just update state and toggle CSS class
-      state.selectedLayerId = id;
+      // Shift+click = toggle multi-select
+      if (e.shiftKey) {
+        if (state.selectedLayerIds.has(id)) {
+          state.selectedLayerIds.delete(id);
+          if (state.selectedLayerId === id) {
+            state.selectedLayerId = state.selectedLayerIds.size > 0 ? [...state.selectedLayerIds][state.selectedLayerIds.size - 1] : null;
+          }
+        } else {
+          state.selectedLayerIds.add(id);
+          state.selectedLayerId = id;
+        }
+        els.recipeCard.querySelectorAll(".layer").forEach(el => {
+          el.classList.toggle("selected", state.selectedLayerIds.has(el.dataset.layerId));
+        });
+        syncLayerControlsFromSelection();
+        renderLayersList();
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
+      // Normal click: single select (unless already in multi-select and clicking a selected item)
+      if (!state.selectedLayerIds.has(id)) {
+        state.selectedLayerId = id;
+        state.selectedLayerIds.clear();
+        state.selectedLayerIds.add(id);
+      } else {
+        state.selectedLayerId = id;
+      }
       // Update visual selection without full re-render
-      els.recipeCard.querySelectorAll(".layer.selected").forEach(el => el.classList.remove("selected"));
-      layerEl.classList.add("selected");
+      els.recipeCard.querySelectorAll(".layer").forEach(el => {
+        el.classList.toggle("selected", state.selectedLayerIds.has(el.dataset.layerId));
+      });
       syncLayerControlsFromSelection();
       renderLayersList();
 
@@ -1741,10 +2521,17 @@ Servis sayısı: {{SERVINGS}}
           start: { x: layer.x, y: layer.y, w: layer.w, h: layer.h }
         };
       } else {
+        // Multi-drag: store offsets for all selected layers
+        const offsets = {};
+        state.selectedLayerIds.forEach(sid => {
+          const sl = getLayerById(sid);
+          if (sl && !sl.locked) offsets[sid] = { x: p.x - sl.x, y: p.y - sl.y };
+        });
         state.drag = {
           layerId: id,
           offsetX: p.x - layer.x,
-          offsetY: p.y - layer.y
+          offsetY: p.y - layer.y,
+          multiOffsets: offsets
         };
       }
     }
@@ -1756,6 +2543,19 @@ Servis sayısı: {{SERVINGS}}
       let showV = false, showH = false;
 
       if (state.drag) {
+        const p = pointerToCardCoords(e.clientX, e.clientY);
+        // Multi-drag: move all selected layers
+        if (state.drag.multiOffsets && Object.keys(state.drag.multiOffsets).length > 1) {
+          Object.entries(state.drag.multiOffsets).forEach(([sid, off]) => {
+            const sl = getLayerById(sid);
+            if (!sl || sl.locked) return;
+            sl.x = p.x - off.x;
+            sl.y = p.y - off.y;
+          });
+          renderCardLayers();
+          return;
+        }
+
         const layer = getLayerById(state.drag.layerId);
         if (!layer || layer.locked) return;
 
@@ -1822,9 +2622,81 @@ Servis sayısı: {{SERVINGS}}
 
     els.recipeCard.addEventListener("mousedown", (e) => {
       if (e.target === els.recipeCard || e.target === els.hero || (e.target instanceof HTMLElement && e.target.classList.contains("guide"))) {
-        clearSelection();
+        if (!e.shiftKey) clearSelection();
+
+        // Start box-drag selection
+        if (e.target === els.recipeCard || e.target === els.hero) {
+          const p = pointerToCardCoords(e.clientX, e.clientY);
+          state.boxSelect = { startX: p.x, startY: p.y, active: true };
+          // Create selection marquee
+          let box = document.getElementById("selectionBox");
+          if (!box) {
+            box = document.createElement("div");
+            box.id = "selectionBox";
+            box.className = "selection-box";
+            els.recipeCard.appendChild(box);
+          }
+          box.style.left = p.x + "px";
+          box.style.top = p.y + "px";
+          box.style.width = "0";
+          box.style.height = "0";
+          box.style.display = "block";
+        }
       }
     });
+
+    // Box-drag selection mousemove
+    const origMouseMoveHandler = onMouseMove;
+    function enhancedMouseMove(e) {
+      if (state.boxSelect && state.boxSelect.active) {
+        const p = pointerToCardCoords(e.clientX, e.clientY);
+        const sx = Math.min(state.boxSelect.startX, p.x);
+        const sy = Math.min(state.boxSelect.startY, p.y);
+        const sw = Math.abs(p.x - state.boxSelect.startX);
+        const sh = Math.abs(p.y - state.boxSelect.startY);
+        const box = document.getElementById("selectionBox");
+        if (box) {
+          box.style.left = sx + "px";
+          box.style.top = sy + "px";
+          box.style.width = sw + "px";
+          box.style.height = sh + "px";
+        }
+        return;
+      }
+      origMouseMoveHandler(e);
+    }
+
+    const origMouseUpHandler = onMouseUp;
+    function enhancedMouseUp(e) {
+      if (state.boxSelect && state.boxSelect.active) {
+        const p = pointerToCardCoords(e.clientX, e.clientY);
+        const sx = Math.min(state.boxSelect.startX, p.x);
+        const sy = Math.min(state.boxSelect.startY, p.y);
+        const sw = Math.abs(p.x - state.boxSelect.startX);
+        const sh = Math.abs(p.y - state.boxSelect.startY);
+
+        // Find layers that intersect the selection box
+        if (sw > 5 || sh > 5) {
+          state.selectedLayerIds.clear();
+          state.selectedLayerId = null;
+          state.layers.forEach(layer => {
+            const lx = layer.x, ly = layer.y, lw = layer.w, lh = layer.h;
+            // Check intersection
+            if (lx < sx + sw && lx + lw > sx && ly < sy + sh && ly + lh > sy) {
+              state.selectedLayerIds.add(layer.id);
+              state.selectedLayerId = layer.id;
+            }
+          });
+          renderCardLayers();
+        }
+
+        const box = document.getElementById("selectionBox");
+        if (box) box.style.display = "none";
+        state.boxSelect = null;
+        return;
+      }
+      origMouseUpHandler(e);
+    }
 
     // =====================================================
     // Delegated dblclick for inline text editing
@@ -1836,7 +2708,7 @@ Servis sayısı: {{SERVINGS}}
       const layerId = layerEl.dataset.layerId;
       const layer = getLayerById(layerId);
       if (!layer) return;
-      if (layer.locked || layer.type === "macro" || layer.type === "shape") return;
+      if (layer.locked || layer.type === "shape") return;
 
       e.stopPropagation();
       e.preventDefault();
@@ -1892,7 +2764,27 @@ Servis sayısı: {{SERVINGS}}
         c.style.webkitUserSelect = "none";
         c.style.cursor = "";
 
-        layer.text = c.innerHTML;
+        // For macro layers, parse values back into state.recipe.macros
+        if (layer.type === "macro") {
+          const divs = c.querySelectorAll("div");
+          const macroMap = { karbonhidrat: null, protein: null, yag: null, kalori: null };
+          divs.forEach(d => {
+            const txt = d.textContent.trim();
+            if (txt.toLowerCase().startsWith("karbonhidrat")) macroMap.karbonhidrat = txt.split(":").slice(1).join(":").trim();
+            if (txt.toLowerCase().startsWith("protein")) macroMap.protein = txt.split(":").slice(1).join(":").trim();
+            if (txt.toLowerCase().startsWith("ya")) macroMap.yag = txt.split(":").slice(1).join(":").trim();
+            if (txt.toLowerCase().startsWith("kalori")) macroMap.kalori = txt.split(":").slice(1).join(":").trim();
+          });
+          if (macroMap.karbonhidrat !== null) state.recipe.macros.karbonhidrat = macroMap.karbonhidrat;
+          if (macroMap.protein !== null) state.recipe.macros.protein = macroMap.protein;
+          if (macroMap.yag !== null) state.recipe.macros.yag = macroMap.yag;
+          if (macroMap.kalori !== null) state.recipe.macros.kalori = macroMap.kalori;
+          fillEditorsFromRecipe();
+          // Re-render the macro layer to keep DOM structure clean
+          renderCardLayers();
+        } else {
+          layer.text = c.innerHTML;
+        }
 
         richToolbar.style.display = "none";
         syncLayerControlsFromSelection();
@@ -1901,12 +2793,13 @@ Servis sayısı: {{SERVINGS}}
       c.addEventListener("blur", finishEdit, { once: true });
     });
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("mousemove", enhancedMouseMove);
+    window.addEventListener("mouseup", enhancedMouseUp);
 
     // =====================================================
     // Rich Toolbar interactions
     // =====================================================
+    const FONT_SIZE_PX_MAP = { "1": "12px", "2": "16px", "3": "20px", "4": "24px", "5": "32px", "6": "40px", "7": "48px" };
     const toolbar = document.getElementById("richToolbar");
     toolbar.querySelectorAll("button").forEach(btn => {
       btn.addEventListener("mousedown", (e) => {
@@ -1918,10 +2811,26 @@ Servis sayısı: {{SERVINGS}}
     const richFontSize = document.getElementById("richFontSize");
     richFontSize.addEventListener("mousedown", (e) => e.preventDefault());
     richFontSize.addEventListener("change", (e) => {
-      if (e.target.value) document.execCommand("fontSize", false, e.target.value);
-      // Restore focus
+      const val = e.target.value;
+      if (!val) return;
+      // Apply font size via execCommand then convert <font size> to inline CSS
+      document.execCommand("fontSize", false, val);
+      // Find all <font size=X> inside the active content and convert to spans
       const layerEl = els.recipeCard.querySelector(`.layer[data-layer-id="${state.selectedLayerId}"]`);
-      if (layerEl) { const c = layerEl.querySelector(".content"); if (c && c.contentEditable === "true") c.focus(); }
+      if (layerEl) {
+        const c = layerEl.querySelector(".content");
+        if (c) {
+          c.querySelectorAll('font[size]').forEach(fontEl => {
+            const sz = fontEl.getAttribute('size');
+            const px = FONT_SIZE_PX_MAP[sz] || (sz * 4 + 8) + 'px';
+            const span = document.createElement('span');
+            span.style.fontSize = px;
+            span.innerHTML = fontEl.innerHTML;
+            fontEl.replaceWith(span);
+          });
+          if (c.contentEditable === "true") c.focus();
+        }
+      }
     });
     const colorPicker = document.getElementById("richColorPicker");
     colorPicker.addEventListener("input", (e) => {
@@ -1933,6 +2842,53 @@ Servis sayısı: {{SERVINGS}}
         const c = layerEl.querySelector(".content");
         if (c.contentEditable === "true") c.focus();
       }
+    });
+
+    // =====================================================
+    // Hero double-click for position/zoom
+    // =====================================================
+    let heroEditMode = false;
+    let heroDragStart = null;
+
+    els.hero.addEventListener("dblclick", (e) => {
+      if (!state.generatedImageDataUrl) return;
+      e.stopPropagation();
+      heroEditMode = true;
+      els.hero.classList.add("editing");
+      els.heroZoomBar.classList.add("active");
+      els.heroZoom.value = state.heroZoom || 100;
+    });
+
+    els.hero.addEventListener("mousedown", (e) => {
+      if (!heroEditMode) return;
+      e.preventDefault();
+      e.stopPropagation();
+      heroDragStart = { x: e.clientX, y: e.clientY, posX: state.heroPosition.x, posY: state.heroPosition.y };
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!heroDragStart) return;
+      const dx = (e.clientX - heroDragStart.x) * 0.15;
+      const dy = (e.clientY - heroDragStart.y) * 0.15;
+      state.heroPosition.x = Math.max(0, Math.min(100, heroDragStart.posX - dx));
+      state.heroPosition.y = Math.max(0, Math.min(100, heroDragStart.posY - dy));
+      renderHero();
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (heroDragStart) { heroDragStart = null; saveState(); }
+    });
+
+    els.heroZoom.addEventListener("input", (e) => {
+      state.heroZoom = Number(e.target.value);
+      renderHero();
+    });
+
+    els.heroEditDone.addEventListener("click", () => {
+      heroEditMode = false;
+      els.hero.classList.remove("editing");
+      els.heroZoomBar.classList.remove("active");
+      saveState();
     });
 
     // =====================================================
@@ -2078,56 +3034,138 @@ Servis sayısı: {{SERVINGS}}
     // API key utils
     // =====================================================
     function saveApiKey() {
-      localStorage.setItem("gemini_api_key_recipe_cards", els.apiKey.value.trim());
-      setStatus("API key localStorage'a kaydedildi.", "ok");
+      const gKey = els.apiKey.value.trim();
+      const hKey = els.githubPat.value.trim();
+      localStorage.setItem("gemini_api_key_recipe_cards", gKey);
+      localStorage.setItem("github_pat_recipe", hKey);
+      setStatus("API anahtarları (Gemini + GitHub) kaydedildi.", "ok");
     }
     function loadApiKey() {
-      const key = localStorage.getItem("gemini_api_key_recipe_cards") || "";
-      if (key) {
-        els.apiKey.value = key;
-        setStatus("API key yüklendi.", "ok");
+      const gKey = localStorage.getItem("gemini_api_key_recipe_cards") || "";
+      const hKey = localStorage.getItem("github_pat_recipe") || "";
+      if (gKey) els.apiKey.value = gKey;
+      if (hKey) els.githubPat.value = hKey;
+      if (gKey || hKey) {
+        setStatus("API anahtarları yüklendi.", "ok");
       } else {
-        setStatus("Kayıtlı API key bulunamadı.", "");
+        setStatus("Kayıtlı API anahtarı bulunamadı.", "");
       }
     }
     function clearApiKey() {
       localStorage.removeItem("gemini_api_key_recipe_cards");
+      localStorage.removeItem("github_pat_recipe");
       els.apiKey.value = "";
-      setStatus("API key temizlendi.", "ok");
+      els.githubPat.value = "";
+      setStatus("API anahtarları temizlendi.", "ok");
     }
 
+    async function magicGenerate() {
+      try {
+        const dish = els.dishName.value.trim();
+        if (!dish) { setStatus("Önce yemek adını girin.", "error"); return; }
+
+        // Show banner
+        els.progressBanner.classList.add("active");
+        els.magicBtn.disabled = true;
+
+        // Step 1: Text
+        els.progressText.textContent = "AI Tarif taslağı oluşturuluyor...";
+        const textPromptInput = els.magicTextPrompt.value.trim();
+
+        // Temporarily inject user's extra prompt into the template if provided
+        const originalTpl = els.textPromptTemplate.value;
+        if (textPromptInput) {
+          els.textPromptTemplate.value += "\n\nKullanıcı özel isteği: " + textPromptInput;
+        }
+
+        await callGeminiTextDraft();
+        els.textPromptTemplate.value = originalTpl; // Restore
+
+        // Step 2: Image
+        els.progressText.textContent = "AI Görsel üretiliyor (yaklaşık 20-30sn)...";
+        const imagePromptInput = els.magicImagePrompt.value.trim();
+
+        // If user provided a specific image prompt extension, we use it for generation
+        if (imagePromptInput) {
+          // We can append it to the revision prompt or just call Imagen
+          // callImagenGenerate has revisionText parameter
+          await callImagenGenerate(imagePromptInput);
+        } else {
+          await callImagenGenerate();
+        }
+
+        els.progressText.textContent = "Tamamlandı! ✨";
+        setStatus("Magic AI: Tarif ve görsel başarıyla oluşturuldu.", "ok");
+        els.imageRevisionPrompt.value = "";
+
+        setTimeout(() => {
+          els.progressBanner.classList.remove("active");
+        }, 5000);
+
+      } catch (err) {
+        console.error(err);
+        setStatus("Hata: " + err.message, "error");
+        els.progressText.textContent = "Hata oluştu.";
+        setTimeout(() => els.progressBanner.classList.remove("active"), 4000);
+      } finally {
+        autoSaveDraftToGitHub(); // Background auto-save draft
+        els.magicBtn.disabled = false;
+      }
+    }
+
+    els.magicBtn.addEventListener("click", magicGenerate);
+
     function saveState() {
-      localStorage.setItem("recipe_card_state", JSON.stringify({
-        recipe: state.recipe,
-        layers: state.layers,
-        generatedImageDataUrl: state.generatedImageDataUrl
-      }));
+      pushHistory();
+      // Light local cache (NO base64 image to avoid quota issues)
+      const name = els.templateName.value.trim();
+      if (name) {
+        const lightJson = JSON.stringify({
+          templateName: name,
+          createdAt: new Date().toISOString(),
+          recipe: state.recipe,
+          layers: state.layers,
+          heroPosition: state.heroPosition,
+          heroZoom: state.heroZoom,
+          heroImageUrl: state.heroImageUrl || ""
+          // NOTE: generatedImageDataUrl intentionally excluded — too large for localStorage
+        });
+        try { localStorage.setItem("tpl_" + name, lightJson); } catch (e) { console.warn("Local cache save skipped (quota)", e); }
+      }
     }
 
     function loadState() {
-      try {
-        const s = localStorage.getItem("recipe_card_state");
-        if (s) {
-          const parsed = JSON.parse(s);
-          // Version check/Migration: if titleText is missing, it's a legacy template
-          if (parsed.layers && !parsed.layers.some(l => l.key === "titleText")) {
-            console.log("Legacy template detected, not loading layers to use new defaults.");
-            if (parsed.recipe) state.recipe = parsed.recipe;
-            return false;
-          }
-          if (parsed.recipe) state.recipe = parsed.recipe;
-          if (parsed.layers && parsed.layers.length > 0) state.layers = parsed.layers;
-          if (parsed.generatedImageDataUrl) state.generatedImageDataUrl = parsed.generatedImageDataUrl;
-          return true;
+      // Try loading from local cache first for speed
+      const lastTpl = localStorage.getItem("last_template_name");
+      if (lastTpl) {
+        const raw = localStorage.getItem("tpl_" + lastTpl);
+        if (raw) {
+          try {
+            const t = JSON.parse(raw);
+            if (t.recipe) state.recipe = t.recipe;
+            if (t.layers && t.layers.length) state.layers = t.layers;
+            if (t.heroPosition) state.heroPosition = t.heroPosition;
+            if (t.heroZoom) state.heroZoom = t.heroZoom;
+            // Load hero image from URL (preferred) or fallback to legacy base64
+            if (t.heroImageUrl) {
+              state.heroImageUrl = t.heroImageUrl;
+              state.generatedImageDataUrl = t.heroImageUrl;
+            } else if (t.generatedImageDataUrl) {
+              state.generatedImageDataUrl = t.generatedImageDataUrl;
+            }
+            els.templateName.value = t.templateName || lastTpl;
+            return true;
+          } catch { }
         }
-      } catch (e) { console.error("Could not load state", e); }
+      }
       return false;
     }
 
     function clearState() {
-      localStorage.removeItem("recipe_card_state");
       state.layers = [];
       state.generatedImageDataUrl = "";
+      state.heroPosition = { x: 50, y: 50 };
+      state.heroZoom = 100;
       init(true);
       setStatus("Şablon sıfırlandı.", "ok");
     }
@@ -2156,7 +3194,10 @@ Servis sayısı: {{SERVINGS}}
         createdAt: new Date().toISOString(),
         recipe: state.recipe,
         layers: state.layers,
-        generatedImageDataUrl: state.generatedImageDataUrl || ""
+        heroPosition: state.heroPosition,
+        heroZoom: state.heroZoom,
+        heroImageUrl: state.heroImageUrl || ""
+        // NOTE: generatedImageDataUrl NOT included — stored as separate image file on GitHub
       }, null, 2);
     }
 
@@ -2176,43 +3217,115 @@ Servis sayısı: {{SERVINGS}}
       });
     }
 
-    function saveTemplate() {
+    async function saveTemplate() {
       const name = els.templateName.value.trim();
       if (!name) { setStatus("Şablon adı boş olamaz.", "error"); return; }
+
+      const pat = getGitHubPat();
+
+      // Push hero image to GitHub if we have base64 data
+      if (pat && state.generatedImageDataUrl && state.generatedImageDataUrl.startsWith("data:")) {
+        try {
+          setStatus("Hero görseli GitHub'a yükleniyor...", "");
+          const imgB64 = state.generatedImageDataUrl.split(",")[1];
+          const imgName = name.replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ _-]/g, "").replace(/\s+/g, "_") + "_hero.png";
+          const imgApiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/images/${imgName}`;
+          let sha;
+          try {
+            const ex = await fetch(imgApiUrl, { headers: { "Authorization": `Bearer ${pat}` } });
+            if (ex.ok) sha = (await ex.json()).sha;
+          } catch { }
+          const imgBody = { message: `Hero image: ${name}`, content: imgB64 };
+          if (sha) imgBody.sha = sha;
+          const imgRes = await fetch(imgApiUrl, {
+            method: "PUT",
+            headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
+            body: JSON.stringify(imgBody)
+          });
+          if (imgRes.ok) {
+            const imgData = await imgRes.json();
+            // Store raw URL for future loading
+            state.heroImageUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/images/${imgName}`;
+          }
+        } catch (e) { console.warn("Hero image push failed:", e); }
+      }
+
+      // Save template JSON (without base64 image)
       const json = buildTemplateJson(name);
-      localStorage.setItem("tpl_" + name, json);
+      try { localStorage.setItem("tpl_" + name, json); } catch (e) { console.warn("Local cache skipped", e); }
       const list = getAllTemplateNames();
       if (!list.includes(name)) list.push(name);
       localStorage.setItem("recipe_templates_list", JSON.stringify(list));
       localStorage.setItem("last_template_name", name);
       refreshTemplateSelect();
       els.templateSelect.value = name;
+      // Push template JSON to GitHub
+      if (pat) await pushToGitHub();
       setStatus(`Şablon "${name}" kaydedildi.`, "ok");
     }
 
-    function loadTemplate() {
-      const name = els.templateSelect.value;
-      if (!name) { setStatus("Bir şablon seç.", "error"); return; }
-      const raw = localStorage.getItem("tpl_" + name);
+    async function loadTemplate() {
+      const val = els.templateSelect.value;
+      if (!val) { setStatus("Bir şablon seç.", "error"); return; }
+
+      if (val.startsWith("http")) {
+        return await loadCardFromGitHub(val);
+      }
+
+      const raw = localStorage.getItem("tpl_" + val);
       if (!raw) { setStatus("Şablon bulunamadı.", "error"); return; }
       try {
         const t = JSON.parse(raw);
         if (t.recipe) state.recipe = t.recipe;
         if (t.layers && t.layers.length) state.layers = t.layers;
-        if (t.generatedImageDataUrl) state.generatedImageDataUrl = t.generatedImageDataUrl;
-        els.templateName.value = t.templateName || name;
-        localStorage.setItem("last_template_name", name);
+        if (t.heroPosition) state.heroPosition = t.heroPosition;
+        if (t.heroZoom) state.heroZoom = t.heroZoom;
+        // Load hero image from URL
+        if (t.heroImageUrl) {
+          state.heroImageUrl = t.heroImageUrl;
+          state.generatedImageDataUrl = t.heroImageUrl;
+        } else if (t.generatedImageDataUrl) {
+          state.generatedImageDataUrl = t.generatedImageDataUrl;
+        }
+        els.templateName.value = t.templateName || val;
+        localStorage.setItem("last_template_name", val);
         fillEditorsFromRecipe();
         renderCardLayers();
         renderHero();
-        setStatus(`Şablon "${name}" yüklendi.`, "ok");
+        setStatus(`Şablon "${val}" yüklendi.`, "ok");
       } catch (e) { setStatus("Şablon yüklenemedi: " + e.message, "error"); }
     }
 
-    function deleteTemplate() {
+    async function deleteTemplate() {
       const name = els.templateSelect.value;
       if (!name) { setStatus("Silinecek şablon seç.", "error"); return; }
       if (!confirm(`"${name}" şablonunu silmek istediğinden emin misin?`)) return;
+
+      const pat = getGitHubPat();
+      if (pat) {
+        setStatus("GitHub'dan siliniyor...", "");
+        try {
+          const fileName = name.replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ _-]/g, "").replace(/\s+/g, "_") + ".json";
+          const imgName = name.replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ _-]/g, "").replace(/\s+/g, "_") + "_hero.png";
+
+          const deleteGithubFile = async (path, msg) => {
+            const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
+            const existing = await fetch(apiUrl, { headers: { "Authorization": `Bearer ${pat}` } });
+            if (existing.ok) {
+              const sha = (await existing.json()).sha;
+              await fetch(apiUrl, {
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ message: msg, sha })
+              });
+            }
+          };
+
+          await deleteGithubFile(`${GITHUB_TEMPLATES_PATH}/${fileName}`, `Delete template JSON: ${name}`);
+          await deleteGithubFile(`images/${imgName}`, `Delete template image: ${name}`);
+        } catch (e) { console.warn("GitHub silme hatası:", e); }
+      }
+
       localStorage.removeItem("tpl_" + name);
       let list = getAllTemplateNames().filter(n => n !== name);
       localStorage.setItem("recipe_templates_list", JSON.stringify(list));
@@ -2231,25 +3344,309 @@ Servis sayısı: {{SERVINGS}}
 
       setStatus("GitHub'a gönderiliyor...", "");
       try {
-        // Check if file exists (to get sha)
-        let sha = undefined;
-        try {
-          const existing = await fetch(apiUrl, { headers: { "Authorization": `Bearer ${pat}` } });
-          if (existing.ok) { sha = (await existing.json()).sha; }
-        } catch { }
-
-        const body = { message: `Update template: ${name}`, content };
-        if (sha) body.sha = sha;
-
-        const res = await fetch(apiUrl, {
+        let body = { message: `Update template: ${name}`, content };
+        let res = await fetch(apiUrl, {
           method: "PUT",
           headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
           body: JSON.stringify(body)
         });
-        if (!res.ok) { const e = await res.json(); throw new Error(e.message || res.status); }
+
+        if (res.status === 409 || res.status === 422) {
+          const existing = await fetch(apiUrl, { headers: { "Authorization": `Bearer ${pat}` } });
+          if (existing.ok) {
+            body.sha = (await existing.json()).sha;
+            res = await fetch(apiUrl, {
+              method: "PUT",
+              headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
+              body: JSON.stringify(body)
+            });
+          }
+        }
+
+        if (!res.ok) throw new Error("GitHub yükleme hatası.");
         setStatus(`"${name}" GitHub'a gönderildi!`, "ok");
       } catch (e) { setStatus("GitHub hatası: " + e.message, "error"); }
     }
+
+    // =====================================================
+    // Export to Lipodem Repo Flow
+    // =====================================================
+    function makeSafeFileName(str) {
+      if (!str) return "";
+      const charMap = {
+        'ı': 'i', 'İ': 'i', 'ş': 's', 'Ş': 's',
+        'ğ': 'g', 'Ğ': 'g', 'ü': 'u', 'Ü': 'u',
+        'ö': 'o', 'Ö': 'o', 'ç': 'c', 'Ç': 'c',
+        'I': 'i'
+      };
+
+      let safeStr = str.replace(/[ıİşŞğĞüÜöÖçÇI]/g, match => charMap[match]);
+      safeStr = safeStr.toLowerCase().replace(/[^a-z0-9\s_\.-]/g, "").trim().replace(/\s+/g, "_");
+      return safeStr;
+    }
+
+    async function exportToLipodem() {
+      const pat = getGitHubPat();
+      if (!pat) { setStatus("GitHub PAT gerekli.", "error"); return; }
+
+      let rawName = els.lipodemFileName.value.trim() || state.recipe.title || "Adsiz Tarif";
+      let baseName = makeSafeFileName(rawName);
+      if (!baseName.endsWith(".jpg")) baseName += ".jpg";
+
+      const tagsRaw = els.lipodemTags.value.trim();
+      const tagsArray = tagsRaw ? tagsRaw.split(",").map(t => t.trim().toLowerCase()).filter(Boolean) : [];
+
+      const lipodemRepo = "mustafasacar35/lipodem-takip-paneli";
+      const branch = "main";
+      const headers = { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" };
+
+      setStatus("JPG oluşturuluyor...", "");
+      els.recipeCard.classList.add("export-mode");
+      const scale = 2; // High quality
+
+      try {
+        const dataUrl = await htmlToImage.toJpeg(els.recipeCard, {
+          quality: 0.9,
+          pixelRatio: scale,
+          style: { transform: "none", margin: 0 }
+        });
+        els.recipeCard.classList.remove("export-mode");
+        const b64 = dataUrl.split(",")[1];
+
+        // 1. Push JPG
+        setStatus(`JPG GitHub'a yükleniyor (${baseName})...`, "");
+        const imgApiUrl = `https://api.github.com/repos/${lipodemRepo}/contents/tarifler/${baseName}`;
+        let imgBody = { message: `Add/Update recipe card: ${baseName}`, content: b64, branch };
+
+        let imgRes = await fetch(imgApiUrl, { method: "PUT", headers, body: JSON.stringify(imgBody) });
+        if (imgRes.status === 409 || imgRes.status === 422) {
+          const ex = await fetch(imgApiUrl, { headers });
+          if (ex.ok) {
+            imgBody.sha = (await ex.json()).sha;
+            imgRes = await fetch(imgApiUrl, { method: "PUT", headers, body: JSON.stringify(imgBody) });
+          }
+        }
+        if (!imgRes.ok) throw new Error("Resim yüklenemedi.");
+
+        // Helper to fetch, parse, update and push JSON files
+        const updateJsonFile = async (path, updaterFn, defaultObj) => {
+          const url = `https://api.github.com/repos/${lipodemRepo}/contents/tarifler/${path}`;
+          let sha = null;
+          let contentObj = defaultObj;
+
+          const ex = await fetch(url + "?ref=" + branch, { headers });
+          if (ex.ok) {
+            const fileData = await ex.json();
+            sha = fileData.sha;
+            try { contentObj = JSON.parse(decodeURIComponent(escape(atob(fileData.content)))); } catch (e) { }
+          }
+
+          contentObj = updaterFn(contentObj);
+
+          const newContentB64 = btoa(unescape(encodeURIComponent(JSON.stringify(contentObj, null, 2))));
+          let putBody = { message: `Update ${path} for ${baseName}`, content: newContentB64, branch };
+          if (sha) putBody.sha = sha;
+
+          await fetch(url, { method: "PUT", headers, body: JSON.stringify(putBody) });
+        };
+
+        // 2. Update list.json (Support string -> object conversion for tags)
+        setStatus("list.json güncelleniyor...", "");
+        await updateJsonFile("list.json", (list) => {
+          if (!Array.isArray(list)) list = [];
+
+          // Convert to standardized object format
+          list = list.map(item => {
+            if (typeof item === 'string') return { name: item, tags: [] };
+            if (typeof item === 'object' && item !== null) {
+              return { name: item.name || item.file || item.filename, tags: item.tags || [] };
+            }
+            return null;
+          }).filter(Boolean);
+
+          // Find existing card or add new
+          let existing = list.find(l => l.name === baseName);
+          if (existing) {
+            existing.tags = [...new Set([...existing.tags, ...tagsArray])];
+          } else {
+            list.push({ name: baseName, tags: tagsArray });
+          }
+
+          // Sort alphabetically by name
+          return list.sort((a, b) => (a.name).localeCompare(b.name, "tr"));
+        }, []);
+
+        setStatus(`Başarıyla Lipodem paneline gönderildi: ${baseName}`, "ok");
+
+      } catch (err) {
+        els.recipeCard.classList.remove("export-mode");
+        console.error("Lipodem Export Error:", err);
+        setStatus("Aktarım hatası: " + err.message, "error");
+      }
+    }
+
+    // =====================================================
+    // Auto Draft to GitHub
+    // =====================================================
+    async function autoSaveDraftToGitHub() {
+      const pat = getGitHubPat();
+      if (!pat) return; // Silent return if no PAT
+
+      try {
+        const timestamp = Date.now();
+        const rawName = state.recipe.title || "taslak";
+        const baseName = rawName.toLowerCase().replace(/[^a-z0-9çğıöşü _-]/g, "").replace(/\s+/g, "_");
+        const draftName = `${baseName}_${timestamp}`;
+
+        // 1. Generate very low-res thumbnail (e.g. 216x320 for 1080x1600 card)
+        const scale = 250 / els.recipeCard.offsetWidth;
+        els.recipeCard.classList.add("export-mode");
+        const thumbDataUrl = await htmlToImage.toJpeg(els.recipeCard, {
+          quality: 0.6,
+          pixelRatio: scale,
+          style: { transform: "none", margin: 0 }
+        });
+        els.recipeCard.classList.remove("export-mode");
+        const thumbB64 = thumbDataUrl.split(",")[1];
+
+        // 2. Prepare JSON state object
+        const draftJsonObj = {
+          templateName: draftName,
+          createdAt: new Date().toISOString(),
+          recipe: state.recipe,
+          layers: state.layers,
+          heroPosition: state.heroPosition,
+          heroZoom: state.heroZoom,
+          heroImageUrl: state.heroImageUrl || "",
+          generatedImageDataUrl: state.generatedImageDataUrl || ""
+        };
+
+        // 3. Push thumb, full image (if base64), and JSON to GitHub `drafts/` folder
+        const pushDraftFile = async (fileName, b64Content, msg) => {
+          const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/drafts/${fileName}`;
+          await fetch(url, {
+            method: "PUT",
+            headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ message: msg, content: b64Content })
+          });
+        };
+
+        // Push thumbnail
+        pushDraftFile(`thumb_${draftName}.jpg`, thumbB64, `Auto-draft thumb: ${draftName}`).catch(e => console.log("Draft thumb skip", e));
+
+        // If the generated image is a base64 string, push it as a standalone image file to save JSON space
+        if (state.generatedImageDataUrl && state.generatedImageDataUrl.startsWith("data:")) {
+          const fullB64 = state.generatedImageDataUrl.split(",")[1];
+          const imgExt = state.generatedImageDataUrl.includes("image/jpeg") ? "jpg" : "png";
+          const fullImgName = `${draftName}.${imgExt}`;
+
+          try {
+            await pushDraftFile(fullImgName, fullB64, `Auto-draft full image: ${draftName}`);
+            // Update the JSON to point to the raw GitHub URL instead of embedding a 2.5MB base64 string
+            draftJsonObj.heroImageUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/drafts/${fullImgName}`;
+            draftJsonObj.generatedImageDataUrl = "";
+          } catch (e) {
+            console.error("Failed to push full draft image to GitHub", e);
+            draftJsonObj.generatedImageDataUrl = state.generatedImageDataUrl; // Fallback
+          }
+        }
+
+        const jsonB64 = btoa(unescape(encodeURIComponent(JSON.stringify(draftJsonObj, null, 2))));
+        pushDraftFile(`${draftName}.json`, jsonB64, `Auto-draft json: ${draftName}`).catch(e => console.log("Draft json skip", e));
+
+        console.log("Taslak arka planda kaydediliyor:", draftName);
+      } catch (err) {
+        els.recipeCard.classList.remove("export-mode");
+        console.warn("Taslak kaydetme hatası:", err);
+      }
+    }
+
+    // =====================================================
+    // Draft Gallery Logic
+    // =====================================================
+    async function openDraftGallery() {
+      const pat = getGitHubPat();
+      if (!pat) { setStatus("GitHub PAT gerekli.", "error"); return; }
+
+      els.draftModal.style.display = "block";
+      els.draftStatus.textContent = "Taslaklar GitHub'dan çekiliyor...";
+      els.draftGrid.innerHTML = "";
+
+      try {
+        const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/drafts`, {
+          headers: { "Authorization": `Bearer ${pat}` }
+        });
+
+        if (!res.ok) throw new Error("Taslak klasörü bulunamadı veya erişilemedi.");
+        const files = await res.json();
+
+        const thumbs = files.filter(f => f.name.startsWith("thumb_") && f.name.endsWith(".jpg"));
+        const jsons = files.filter(f => f.name.endsWith(".json") && !f.name.startsWith("thumb_"));
+
+        if (thumbs.length === 0) {
+          els.draftStatus.textContent = "Hiç taslak bulunamadı.";
+          return;
+        }
+
+        // Sort by name descending (since timestamp is at the end)
+        thumbs.sort((a, b) => b.name.localeCompare(a.name));
+
+        els.draftStatus.textContent = `${thumbs.length} taslak bulundu.`;
+
+        for (const thumb of thumbs) {
+          const draftId = thumb.name.replace("thumb_", "").replace(".jpg", "");
+          const matchingJson = jsons.find(j => j.name === draftId + ".json");
+
+          const card = document.createElement("div");
+          card.className = "draft-card";
+
+          const img = document.createElement("img");
+          img.src = thumb.download_url;
+          img.loading = "lazy";
+          card.appendChild(img);
+
+          const info = document.createElement("div");
+          info.className = "info";
+
+          const nameEl = document.createElement("div");
+          nameEl.className = "d-name";
+          let friendlyName = draftId.split("_").slice(0, -1).join(" ");
+          if (!friendlyName) friendlyName = draftId;
+          nameEl.textContent = friendlyName.charAt(0).toUpperCase() + friendlyName.slice(1);
+          info.appendChild(nameEl);
+
+          const dateEl = document.createElement("div");
+          dateEl.className = "d-date";
+          // extract timestamp
+          const tsMatch = draftId.match(/_(\d+)$/);
+          if (tsMatch) {
+            const d = new Date(parseInt(tsMatch[1]));
+            dateEl.textContent = d.toLocaleString("tr-TR");
+          } else {
+            dateEl.textContent = "Bilinmeyen Tarih";
+          }
+          info.appendChild(dateEl);
+
+          card.appendChild(info);
+
+          // Click to load
+          if (matchingJson) {
+            card.onclick = () => loadCardFromGitHub(matchingJson.download_url).then(() => {
+              els.draftModal.style.display = "none";
+            });
+          } else {
+            card.style.opacity = "0.5";
+            card.title = "JSON veri dosyası eksik";
+          }
+
+          els.draftGrid.appendChild(card);
+        }
+
+      } catch (err) {
+        els.draftStatus.textContent = "Hata: " + err.message;
+      }
+    }
+
 
     async function pullFromGitHub() {
       const pat = getGitHubPat();
@@ -2284,6 +3681,7 @@ Servis sayısı: {{SERVINGS}}
     els.deleteTemplateBtn.addEventListener("click", deleteTemplate);
     els.pushGithubBtn.addEventListener("click", pushToGitHub);
     els.pullGithubBtn.addEventListener("click", pullFromGitHub);
+    els.refreshCardsBtn.addEventListener("click", refreshSavedCards);
 
     // =====================================================
     // Hero Upload & Reference Image
@@ -2313,6 +3711,11 @@ Servis sayısı: {{SERVINGS}}
         try {
           const base64 = ev.target.result.split(",")[1];
           const mimeType = file.type || "image/jpeg";
+
+          // Store reference image for later revision use
+          state.referenceImageBase64 = base64;
+          state.referenceImageMime = mimeType;
+
           const model = els.textModel.value.trim() || "gemini-2.5-flash";
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
@@ -2335,7 +3738,7 @@ Servis sayısı: {{SERVINGS}}
 
           state.recipe.imagePrompt = promptText;
           els.imagePromptEditor.value = promptText;
-          setStatus("AI referans resimden ilham aldı! Şimdi 'AI Görsel Üret' butonuna basabilirsin.", "ok");
+          setStatus("AI referans resimden ilham aldı! Referans resim revizyon için de kullanılabilir.", "ok");
         } catch (err) { setStatus("Referans hatası: " + err.message, "error"); }
       };
       reader.readAsDataURL(file);
@@ -2410,6 +3813,36 @@ Servis sayısı: {{SERVINGS}}
     // =====================================================
     // Imagen generate
     // =====================================================
+    async function rewritePromptWithRevision(originalPrompt, revisionText) {
+      const apiKey = els.apiKey.value.trim();
+      const model = els.textModel.value.trim() || "gemini-2.5-flash";
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+      // Build parts — include reference image if available
+      const parts = [];
+      if (state.referenceImageBase64 && state.referenceImageMime) {
+        parts.push({ inlineData: { mimeType: state.referenceImageMime, data: state.referenceImageBase64 } });
+      }
+      parts.push({
+        text: `Below is an image generation prompt. The user wants to revise it.${state.referenceImageBase64 ? ' I have also attached a reference image — use it as visual inspiration when rewriting the prompt.' : ''} Rewrite the ENTIRE prompt incorporating the revision so the final result reflects the changes. Output ONLY the new prompt, nothing else.
+
+Original prompt:
+${originalPrompt}
+
+Revision request:
+${revisionText}`
+      });
+
+      const body = {
+        contents: [{ role: "user", parts }],
+        generationConfig: { temperature: 0.3 }
+      };
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || "Prompt rewrite failed");
+      return data?.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("\n").trim() || originalPrompt;
+    }
+
     async function callImagenGenerate(revisionText = "") {
       const apiKey = els.apiKey.value.trim();
       if (!apiKey) throw new Error("Önce Gemini API key gir.");
@@ -2421,8 +3854,22 @@ Servis sayısı: {{SERVINGS}}
       if (!userImagePrompt) throw new Error("Önce AI Taslak Oluştur veya görsel prompt gir.");
 
       const styleAddon = els.imageStylePrompt.value.trim();
-      let finalPrompt = styleAddon ? `${userImagePrompt}\n\nStyle requirements: ${styleAddon}` : userImagePrompt;
-      if (revisionText) finalPrompt += `\n\nRevision: ${revisionText}`;
+      let basePrompt = styleAddon ? `${userImagePrompt}\n\nStyle requirements: ${styleAddon}` : userImagePrompt;
+
+      // Enhance prompt with reference image AND/OR revision text
+      let finalPrompt = basePrompt;
+      const hasRef = state.referenceImageBase64 && state.referenceImageMime;
+
+      if (revisionText || hasRef) {
+        // Use Gemini to rewrite prompt with revision notes and/or reference image
+        const refNote = hasRef ? " İlham görseli de eklendi, ondan esinlen." : "";
+        const revNote = revisionText || (hasRef ? "İlham görseline daha yakın bir sonuç üret. Görseldeki renk paleti, sunum tarzı ve kompozisyondan ilham al." : "");
+        setStatus("AI prompt zenginleştiriliyor" + (hasRef ? " (ilham görseli dahil)" : "") + "...", "");
+        finalPrompt = await rewritePromptWithRevision(basePrompt, revNote);
+        // Update the editor so user can see the rewritten prompt
+        state.recipe.imagePrompt = finalPrompt;
+        els.imagePromptEditor.value = finalPrompt;
+      }
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:predict`;
 
@@ -2492,13 +3939,16 @@ Servis sayısı: {{SERVINGS}}
     // =====================================================
     async function downloadCardPng() {
       const prevSelected = state.selectedLayerId;
+      const prevIds = new Set(state.selectedLayerIds);
       state.selectedLayerId = null;
+      state.selectedLayerIds.clear();
       renderCardLayers();
 
-      const fileName = (state.recipe.title || els.dishName.value || "tarif-karti")
+      const baseName = (state.recipe.title || els.dishName.value || "tarif-karti")
         .toLowerCase()
         .replace(/[^a-z0-9çğıöşü\s-]/gi, "")
-        .replace(/\s+/g, "-") + ".png";
+        .replace(/\s+/g, "-");
+      const fileName = baseName + ".png";
 
       setStatus("PNG hazırlanıyor...", "");
       const dataUrl = await htmlToImage.toPng(els.recipeCard, {
@@ -2506,14 +3956,196 @@ Servis sayısı: {{SERVINGS}}
         pixelRatio: 2
       });
 
+      // Download locally
       const a = document.createElement("a");
       a.href = dataUrl;
       a.download = fileName;
       a.click();
 
+      // Also push to GitHub cards/ folder
+      const pat = getGitHubPat();
+      if (pat) {
+        try {
+          const b64 = dataUrl.split(",")[1];
+          const cardApiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/cards/${fileName}`;
+          let sha;
+          try {
+            const ex = await fetch(cardApiUrl, { headers: { "Authorization": `Bearer ${pat}` } });
+            if (ex.ok) sha = (await ex.json()).sha;
+          } catch { }
+          const body = { message: `Card PNG: ${baseName}`, content: b64 };
+          if (sha) body.sha = sha;
+          await fetch(cardApiUrl, {
+            method: "PUT",
+            headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+          });
+          setStatus("PNG indirildi + GitHub'a kaydedildi.", "ok");
+        } catch (e) {
+          console.warn("GitHub PNG push hatası:", e);
+          setStatus("PNG indirildi. GitHub push başarısız.", "ok");
+        }
+      } else {
+        setStatus("PNG indirildi.", "ok");
+      }
+
       state.selectedLayerId = prevSelected;
+      state.selectedLayerIds = prevIds;
       renderCardLayers();
-      setStatus("PNG indirildi.", "ok");
+      return dataUrl;
+    }
+
+    // =====================================================
+    // Card Save/Load (GitHub)
+    // =====================================================
+    async function saveCardToGitHub() {
+      const pat = getGitHubPat();
+      if (!pat) { setStatus("GitHub PAT gerekli.", "error"); return; }
+
+      const name = els.templateName.value.trim() || (state.recipe.title || els.dishName.value || "tarif-karti");
+      const baseName = name.replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ _-]/g, "").replace(/\s+/g, "_");
+
+      setStatus("Kart GitHub'a kaydediliyor...", "");
+
+      try {
+        // 1) Generate PNG
+        const prevSelected = state.selectedLayerId;
+        const prevIds = new Set(state.selectedLayerIds);
+        state.selectedLayerId = null;
+        state.selectedLayerIds.clear();
+        renderCardLayers();
+
+        const dataUrl = await htmlToImage.toPng(els.recipeCard, { cacheBust: true, pixelRatio: 2 });
+
+        state.selectedLayerId = prevSelected;
+        state.selectedLayerIds = prevIds;
+        renderCardLayers();
+
+        // 2) Push PNG to cards/
+        const imgB64 = dataUrl.split(",")[1];
+        const pngName = baseName + ".png";
+        const pngUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/cards/${pngName}`;
+        let pngSha;
+        try {
+          const ex = await fetch(pngUrl, { headers: { "Authorization": `Bearer ${pat}` } });
+          if (ex.ok) pngSha = (await ex.json()).sha;
+        } catch { }
+        const pngBody = { message: `Card: ${name}`, content: imgB64 };
+        if (pngSha) pngBody.sha = pngSha;
+        let pngRes = await fetch(pngUrl, {
+          method: "PUT",
+          headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
+          body: JSON.stringify(pngBody)
+        });
+        if (!pngRes.ok && (pngRes.status === 409 || pngRes.status === 422)) {
+          const ex2 = await fetch(pngUrl, { headers: { "Authorization": `Bearer ${pat}` } });
+          if (ex2.ok) { pngBody.sha = (await ex2.json()).sha; }
+          pngRes = await fetch(pngUrl, {
+            method: "PUT",
+            headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
+            body: JSON.stringify(pngBody)
+          });
+        }
+
+        // 3) Push hero image if base64
+        if (state.generatedImageDataUrl && state.generatedImageDataUrl.startsWith("data:")) {
+          const heroB64 = state.generatedImageDataUrl.split(",")[1];
+          const heroName = baseName + "_hero.png";
+          const heroUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/images/${heroName}`;
+          let heroSha;
+          try {
+            const ex = await fetch(heroUrl, { headers: { "Authorization": `Bearer ${pat}` } });
+            if (ex.ok) heroSha = (await ex.json()).sha;
+          } catch { }
+          const heroBody = { message: `Hero: ${name}`, content: heroB64 };
+          if (heroSha) heroBody.sha = heroSha;
+          let heroRes = await fetch(heroUrl, {
+            method: "PUT",
+            headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
+            body: JSON.stringify(heroBody)
+          });
+          if (!heroRes.ok && (heroRes.status === 409 || heroRes.status === 422)) {
+            const ex2 = await fetch(heroUrl, { headers: { "Authorization": `Bearer ${pat}` } });
+            if (ex2.ok) { heroBody.sha = (await ex2.json()).sha; }
+            heroRes = await fetch(heroUrl, {
+              method: "PUT",
+              headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
+              body: JSON.stringify(heroBody)
+            });
+          }
+          if (heroRes.ok) {
+            state.heroImageUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/images/${heroName}`;
+          }
+        }
+
+        // 4) Push template JSON
+        els.templateName.value = name;
+        await saveTemplate();
+
+        setStatus(`Kart "${name}" GitHub'a kaydedildi! (PNG + Şablon + Hero)`, "ok");
+        refreshSavedCards();
+      } catch (e) {
+        console.error(e);
+        setStatus("Kart kaydetme hatası: " + e.message, "error");
+      }
+    }
+
+    async function refreshSavedCards() {
+      const pat = getGitHubPat();
+      if (!pat) return;
+      try {
+        const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/templates`, {
+          headers: { "Authorization": `Bearer ${pat}` }
+        });
+        if (!res.ok) return;
+        const files = await res.json();
+        // Clear or prepare for append? Let's just append to existing local ones
+        // but avoid duplicating the initial placeholder
+        if (Array.isArray(files)) {
+          files.filter(f => f.name.endsWith(".json")).forEach(f => {
+            const n = f.name.replace(".json", "");
+            // Check if already in list
+            let exists = false;
+            for (let i = 0; i < els.templateSelect.options.length; i++) {
+              if (els.templateSelect.options[i].textContent.includes(n)) { exists = true; break; }
+            }
+            if (!exists) {
+              const opt = document.createElement("option");
+              opt.value = f.download_url;
+              opt.textContent = "☁️ " + n;
+              els.templateSelect.appendChild(opt);
+            }
+          });
+        }
+      } catch (e) { console.warn("Saved cards refresh failed", e); }
+    }
+
+    async function loadCardFromGitHub(urlArg) {
+      const url = urlArg || els.templateSelect.value;
+      if (!url || !url.startsWith("http")) { setStatus("Geçerli bir GitHub URL'si seç.", "error"); return; }
+      setStatus("Kart GitHub'dan yükleniyor...", "");
+      try {
+        const res = await fetch(url);
+        const t = await res.json();
+        if (t.recipe) state.recipe = t.recipe;
+        if (t.layers && t.layers.length) state.layers = t.layers;
+        if (t.heroPosition) state.heroPosition = t.heroPosition;
+        if (t.heroZoom) state.heroZoom = t.heroZoom;
+        if (t.heroImageUrl) {
+          state.heroImageUrl = t.heroImageUrl;
+          state.generatedImageDataUrl = t.heroImageUrl;
+        } else if (t.generatedImageDataUrl) {
+          state.generatedImageDataUrl = t.generatedImageDataUrl;
+        }
+        const name = t.templateName || "github_load";
+        els.templateName.value = name;
+        localStorage.setItem("last_template_name", name);
+        try { localStorage.setItem("tpl_" + name, JSON.stringify(t)); } catch { }
+        fillEditorsFromRecipe();
+        renderCardLayers();
+        renderHero();
+        setStatus(`Kart GitHub'dan yüklendi: "${name}"`, "ok");
+      } catch (e) { setStatus("Kart yüklenemedi: " + e.message, "error"); }
     }
 
     // =====================================================
@@ -2522,6 +4154,89 @@ Servis sayısı: {{SERVINGS}}
     els.saveKeyBtn.addEventListener("click", saveApiKey);
     els.loadKeyBtn.addEventListener("click", loadApiKey);
     els.clearKeyBtn.addEventListener("click", clearApiKey);
+    els.exportLipodemBtn.addEventListener("click", exportToLipodem);
+
+    // Smart Dish Autocomplete Logic
+    const lipodemRepoDishes = new Set();
+    let isFetchingDishes = false;
+
+    async function ensureDishesLoaded() {
+      if (lipodemRepoDishes.size > 0 || isFetchingDishes) return;
+      isFetchingDishes = true;
+      try {
+        const url = `https://raw.githubusercontent.com/mustafasacar35/lipodem-takip-paneli/main/tarifler/list.json`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("list.json fetch failed");
+        const list = await res.json();
+        list.forEach(item => {
+          let n = typeof item === 'string' ? item : (item.name || item.filename || "");
+          n = n.replace(/\.(jpg|jpeg|png)$/i, "").replace(/_/g, " ").trim();
+          if (n) lipodemRepoDishes.add(n);
+        });
+      } catch (e) {
+        console.warn("Failed to load generic dish list for autocomplete", e);
+      } finally {
+        isFetchingDishes = false;
+      }
+    }
+
+    function renderAutocomplete(query) {
+      if (!query || query.length < 2) {
+        els.dishAutocomplete.style.display = "none";
+        return;
+      }
+
+      function characterFix(v) {
+        return v.toLowerCase().replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ç/g, 'c');
+      }
+
+      const tokens = query.split(/\s+/).map(characterFix).filter(Boolean);
+
+      const results = Array.from(lipodemRepoDishes).filter(dish => {
+        const n = characterFix(dish);
+        return tokens.every(t => n.includes(t));
+      });
+
+      if (results.length === 0) {
+        els.dishAutocomplete.style.display = "none";
+        return;
+      }
+
+      els.dishAutocomplete.innerHTML = "";
+      results.slice(0, 10).forEach(dish => {
+        const div = document.createElement("div");
+        div.className = "autocomplete-item";
+        div.textContent = dish;
+        div.onmousedown = (e) => { // mousedown fires before blur
+          e.preventDefault();
+          els.dishName.value = dish;
+          els.dishAutocomplete.style.display = "none";
+          // trigger filename suggestion explicitly
+          els.lipodemFileName.value = makeSafeFileName(dish) + ".jpg";
+        };
+        els.dishAutocomplete.appendChild(div);
+      });
+      els.dishAutocomplete.style.display = "block";
+    }
+
+    els.dishName.addEventListener("focus", ensureDishesLoaded);
+
+    els.dishName.addEventListener("input", (e) => {
+      ensureDishesLoaded();
+      const val = e.target.value;
+      renderAutocomplete(val);
+
+      // Auto-suggest filename when dish name changes
+      if (!els.lipodemFileName.value || els.lipodemFileName.value.endsWith(".jpg")) {
+        const safeName = makeSafeFileName(val);
+        if (safeName) els.lipodemFileName.value = safeName + ".jpg";
+        else els.lipodemFileName.value = "";
+      }
+    });
+
+    els.dishName.addEventListener("blur", () => {
+      els.dishAutocomplete.style.display = "none";
+    });
 
     els.generateDraftBtn.addEventListener("click", async () => {
       try {
@@ -2564,7 +4279,14 @@ Servis sayısı: {{SERVINGS}}
         setStatus(e.message || "Görsel üretilemedi.", "error");
       } finally {
         els.revisionImageBtn.disabled = false;
+        autoSaveDraftToGitHub();
       }
+    });
+
+    els.draftGalleryBtn.addEventListener("click", openDraftGallery);
+    els.closeDraftModal.addEventListener("click", () => els.draftModal.style.display = "none");
+    window.addEventListener("click", (e) => {
+      if (e.target === els.draftModal) els.draftModal.style.display = "none";
     });
 
     els.renderBtn.addEventListener("click", () => {
@@ -2586,6 +4308,8 @@ Servis sayısı: {{SERVINGS}}
       }
     });
 
+
+
     // =====================================================
     // Keyboard shortcuts
     // =====================================================
@@ -2593,25 +4317,54 @@ Servis sayısı: {{SERVINGS}}
       const tag = document.activeElement?.tagName?.toLowerCase();
       if (tag === "input" || tag === "textarea" || tag === "select") return;
 
+      // Allow Ctrl+Z/Y to pass through for contentEditable undo/redo
+      const activeContent = document.activeElement;
+      if (activeContent && activeContent.contentEditable === "true") {
+        // Let browser handle undo/redo natively
+        return;
+      }
+
+      // Ctrl+Z / Ctrl+Y for layer undo/redo (not in text editing mode)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undoHistory();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redoHistory();
+        return;
+      }
+
       const layer = getLayerById(state.selectedLayerId);
       if (!layer || layer.locked) return;
 
       let moved = false;
       const step = e.shiftKey ? 10 : 1;
 
-      if (e.key === "ArrowLeft") { layer.x -= step; moved = true; }
-      if (e.key === "ArrowRight") { layer.x += step; moved = true; }
-      if (e.key === "ArrowUp") { layer.y -= step; moved = true; }
-      if (e.key === "ArrowDown") { layer.y += step; moved = true; }
+      if (e.key === "ArrowLeft") { moved = true; }
+      if (e.key === "ArrowRight") { moved = true; }
+      if (e.key === "ArrowUp") { moved = true; }
+      if (e.key === "ArrowDown") { moved = true; }
 
       if (moved) {
         e.preventDefault();
+        // Move all selected layers
+        state.selectedLayerIds.forEach(sid => {
+          const sl = getLayerById(sid);
+          if (!sl || sl.locked) return;
+          if (e.key === "ArrowLeft") sl.x -= step;
+          if (e.key === "ArrowRight") sl.x += step;
+          if (e.key === "ArrowUp") sl.y -= step;
+          if (e.key === "ArrowDown") sl.y += step;
+        });
         renderCardLayers();
       }
 
       if (e.key === "Delete" && layer.name.includes("(Kopya)")) {
-        state.layers = state.layers.filter(l => l.id !== layer.id);
+        state.layers = state.layers.filter(l => !state.selectedLayerIds.has(l.id) || !l.name.includes("(Kopya)"));
         state.selectedLayerId = null;
+        state.selectedLayerIds.clear();
         normalizeLayerZ();
         renderCardLayers();
       }
@@ -2625,33 +4378,47 @@ Servis sayısı: {{SERVINGS}}
     // =====================================================
     // Init
     // =====================================================
-    function init(forceDefault = false) {
-      els.textPromptTemplate.value = DEFAULT_TEXT_PROMPT_TEMPLATE.trim();
+    async function init(forceDefault = false) {
+      if (!els.textPromptTemplate.value.trim()) {
+        els.textPromptTemplate.value = DEFAULT_TEXT_PROMPT_TEMPLATE.trim();
+      }
       loadApiKey();
 
       // Load GitHub PAT
       const storedPat = localStorage.getItem("github_pat_recipe") || "";
       if (storedPat) els.githubPat.value = storedPat;
 
-      // Try to load last template first
-      const lastTpl = localStorage.getItem("last_template_name");
       let loaded = false;
 
-      if (!forceDefault && lastTpl) {
-        const raw = localStorage.getItem("tpl_" + lastTpl);
-        if (raw) {
-          try {
-            const t = JSON.parse(raw);
-            if (t.recipe) state.recipe = t.recipe;
-            if (t.layers && t.layers.length) state.layers = t.layers;
-            if (t.generatedImageDataUrl) state.generatedImageDataUrl = t.generatedImageDataUrl;
-            els.templateName.value = t.templateName || lastTpl;
-            loaded = true;
-          } catch { }
-        }
+      // Try GitHub first if PAT available
+      const pat = getGitHubPat();
+      if (!forceDefault && pat) {
+        try {
+          setStatus("GitHub'dan şablonlar yükleniyor...", "");
+          const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_TEMPLATES_PATH}`, {
+            headers: { "Authorization": `Bearer ${pat}` }
+          });
+          if (res.ok) {
+            const files = await res.json();
+            if (Array.isArray(files)) {
+              for (const file of files) {
+                if (!file.name.endsWith(".json")) continue;
+                try {
+                  const fRes = await fetch(file.download_url);
+                  const tpl = await fRes.json();
+                  const tplName = tpl.templateName || file.name.replace(".json", "");
+                  localStorage.setItem("tpl_" + tplName, JSON.stringify(tpl));
+                  const list = getAllTemplateNames();
+                  if (!list.includes(tplName)) { list.push(tplName); localStorage.setItem("recipe_templates_list", JSON.stringify(list)); }
+                } catch { }
+              }
+            }
+          }
+        } catch { }
       }
 
-      if (!loaded && !forceDefault) loaded = loadState();
+      // Load last template from local cache
+      if (!forceDefault) loaded = loadState();
 
       if (!loaded) {
         state.recipe = {
@@ -2684,6 +4451,8 @@ Servis sayısı: {{SERVINGS}}
       renderCardLayers();
       renderHero();
       refreshTemplateSelect();
+      refreshSavedCards();
+      setStatus(loaded ? "Son şablon yüklendi." : "Hazır.", loaded ? "ok" : "");
 
       els.guideVCenter.style.left = `${CARD_W / 2}px`;
       els.guideHCenter.style.top = `${CARD_H / 2}px`;
