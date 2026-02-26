@@ -1,6 +1,6 @@
 {
   "templateName": "3",
-  "createdAt": "2026-02-26T10:05:17.821Z",
+  "createdAt": "2026-02-26T20:58:40.751Z",
   "recipe": {
     "title": "Ketojenik Kurabiye",
     "servis": "4 kişilik",
@@ -54,7 +54,7 @@
       "h": 73,
       "z": 3,
       "fontFamily": "serif",
-      "fontSize": 38,
+      "fontSize": 52,
       "lineHeight": 1.1,
       "fontWeight": "700",
       "color": "#171717",
