@@ -1456,21 +1456,21 @@ Kullanıcı için Türkçe bir tarif kartı taslağı üret.
 Kurallar:
 - Çıktıyı SADECE geçerli JSON olarak ver.
 - Açıklama, markdown, kod bloğu, ön söz yazma.
-- Makroları "1 porsiyon için" olacak şekilde yaklaşık ver.
 - Miktarları Türkçe ve pratik mutfak dilinde yaz.
 - Hazırlama metni akıcı, kartta kullanılabilecek doğal bir dille olsun.
 - Tarif kartı görseli için ayrıca İngilizce bir imagePrompt üret (food photography odaklı).
 - Görsel promptta yazı/logo/watermark olmasın.
 - Yemeğin sunumu iştah açıcı ve premium görünsün.
 
-Ek kural:
-- Servis sayısı 1 ise "1 kişilik", diğerlerinde "{n} kişilik" yaz.
-- Makro başlığı Türkçe doğal olsun (örn: "1 porsiyon için\\nmakro değerleri" veya özel porsiyon ifadesi).
+Servis ve Makro Kuralları (ÇOK ÖNEMLİ):
+- Sana verilen "Servis sayısı" verisini analiz et (örneğin "4 kişilik", "10 dilim", "2 adet", "1 kase").
+- Sağlayacağın tüm makro değerleri (Kalori, Karb, Protein, Yağ) kesinlikle **TOPLAM yemeğin değil, SADECE 1 BİRİMİN (1 kişi, 1 dilim, 1 adet vb.)** değerleri olmalıdır.
+- "macroTitle" alanını bu birime göre akıllıca isimlendir. Örnek: Servis "10 dilim" ise macroTitle "1 dilim için\\nmakro değerleri" olmalı. Servis "4 kişilik" ise "1 porsiyon için\\nmakro değerleri" olmalı.
 
 Beklenen JSON şeması:
 {
   "title": "string",
-  "servis": "4 kişilik",
+  "servis": "Kullanıcının girdiği orijinal servis metni (örn: 10 dilim)",
   "macroTitle": "1 porsiyon için\\nmakro değerleri",
   "macros": {
     "karbonhidrat": "12 gram",
