@@ -1822,6 +1822,12 @@ Servis sayısı: {{SERVINGS}}
       let cleaned = text.trim();
       cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
 
+      // Step 1.5: Escape literal newlines inside JSON string values
+      // Gemini often returns multi-line strings with real \n instead of \\n
+      cleaned = cleaned.replace(/"([^"]*)"/g, (match) => {
+        return match.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+      });
+
       // Step 2: Try direct parse
       try { return JSON.parse(cleaned); } catch (e) { }
 
