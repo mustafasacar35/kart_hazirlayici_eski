@@ -4238,18 +4238,26 @@ ${revisionText}`
       const userImagePrompt = state.recipe.imagePrompt || "";
       if (!userImagePrompt) throw new Error("Görsel prompt bulunamadı.");
 
-      const styleAddon = els.imageStylePrompt.value.trim();
-      let prompt = styleAddon ? `${userImagePrompt}, ${styleAddon}` : userImagePrompt;
-      // Pollinations works best with English prompts, our imagePrompt is already English
-      prompt += ", food photography, high quality, appetizing, no text, no watermark";
-
-      const encoded = encodeURIComponent(prompt);
-      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1080&height=1080&nologo=true&seed=${Date.now()}`;
+      // Pollinations uses URL-based prompts, so keep it short (max ~500 chars)
+      let prompt = userImagePrompt;
+      if (prompt.length > 400) {
+        prompt = prompt.substring(0, 400);
+      }
+      prompt += ", food photography, appetizing, no text, no watermark";
 
       setStatus("Pollinations.ai ile görsel üretiliyor (15-30sn)...", "");
 
-      // Pollinations returns an image directly, we need to convert to base64
-      const res = await fetch(pollinationsUrl);
+      // Try with the main prompt first
+      let res = await fetchPollinations(prompt);
+
+      // If failed, retry with a simple dish-name-only prompt
+      if (!res.ok) {
+        console.warn("Pollinations failed with full prompt, retrying with simple prompt...");
+        const simpleName = state.recipe.title || "delicious food";
+        const simplePrompt = `${simpleName}, beautiful food photography, appetizing, professional plating, warm natural light, no text, no watermark`;
+        res = await fetchPollinations(simplePrompt);
+      }
+
       if (!res.ok) throw new Error("Pollinations API hata: " + res.status);
 
       const blob = await res.blob();
@@ -4264,6 +4272,12 @@ ${revisionText}`
         reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
+    }
+
+    function fetchPollinations(prompt) {
+      const encoded = encodeURIComponent(prompt);
+      const url = `https://image.pollinations.ai/prompt/${encoded}?width=1080&height=1080&nologo=true&seed=${Date.now()}`;
+      return fetch(url);
     }
 
     // =====================================================
