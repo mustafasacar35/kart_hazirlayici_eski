@@ -4222,7 +4222,7 @@ ${revisionText}`
       if (!apiKey) return null;
 
       const prompt = `Kullanıcı yemek adı olarak "${query}" yazıyor. Amacı ilham almak.
-Bana yaratıcı, lezzetli, beslenme odaklı (diyet, keto, klasik vs.) tam 5 adet nefis yemek ismi ve yanlarında tahmini makro değerlerini üret.
+Bana yaratıcı, lezzetli, beslenme odaklı (diyet, keto, klasik vs.) tam 10 adet nefis yemek ismi ve yanlarında tahmini makro değerlerini üret.
 Yanıtını KESİNLİKLE VE SADECE aşağıdaki gibi JSON olarak ver. Asla açıklama yazma.
 [
   {"n": "Dereotlu Bezelye Salatası", "cal": 80, "k": 10, "p": 3, "y": 3},
@@ -4237,7 +4237,7 @@ Yanıtını KESİNLİKLE VE SADECE aşağıdaki gibi JSON olarak ver. Asla açı
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               temperature: 0.9,
-              maxOutputTokens: 2000,
+              maxOutputTokens: 8000,
               responseMimeType: "application/json"
             }
           })
