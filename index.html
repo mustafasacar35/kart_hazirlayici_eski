@@ -1032,6 +1032,28 @@
       padding: 6px;
       font-size: 12px;
     }
+
+    /* Draft Image Preview Lightbox */
+    .draft-lightbox {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 20000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-out;
+    }
+
+    .draft-lightbox img {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
   </style>
 </head>
 
@@ -1565,6 +1587,11 @@ Servis sayısı: {{SERVINGS}}</textarea>
           Yükle / Düzenle</button>
       </div>
     </aside>
+  </div>
+
+  <!-- DRAFT IMAGE PREVIEW LIGHTBOX -->
+  <div id="draftLightbox" class="draft-lightbox">
+    <img id="draftLightboxImg" src="" alt="Preview" />
   </div>
 
   <!-- DRAFT GALLERY MODAL -->
@@ -4867,6 +4894,18 @@ Yanıtını KESİNLİKLE VE SADECE aşağıdaki gibi JSON olarak ver. Asla açı
         draftGalleryLoading.style.display = 'none';
         draftGalleryGrid.style.display = 'grid';
 
+        // Bind thumbnail click for lightbox preview
+        document.querySelectorAll('.draft-thumb').forEach(img => {
+          img.style.cursor = 'zoom-in';
+          img.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const lightbox = document.getElementById('draftLightbox');
+            const lightboxImg = document.getElementById('draftLightboxImg');
+            lightboxImg.src = e.target.src;
+            lightbox.style.display = 'flex';
+          });
+        });
+
         // Bind buttons
         document.querySelectorAll('.open-draft-btn').forEach(btn => {
           btn.addEventListener('click', async (e) => {
@@ -4879,20 +4918,26 @@ Yanıtını KESİNLİKLE VE SADECE aşağıdaki gibi JSON olarak ver. Asla açı
 
               if (jData.templateName) els.templateName.value = jData.templateName;
               if (jData.recipe) state.recipe = jData.recipe;
-              if (jData.layers) state.layers = jData.layers;
+              if (jData.layers && jData.layers.length) state.layers = jData.layers;
               if (jData.heroPosition) state.heroPosition = jData.heroPosition;
               if (jData.heroZoom) state.heroZoom = jData.heroZoom;
-              if (jData.heroImageUrl) state.heroImageUrl = jData.heroImageUrl;
-              if (jData.generatedImageDataUrl) state.generatedImageDataUrl = jData.generatedImageDataUrl;
+              if (jData.heroImageUrl) {
+                state.heroImageUrl = jData.heroImageUrl;
+                state.generatedImageDataUrl = jData.heroImageUrl;
+              }
+              if (jData.generatedImageDataUrl && jData.generatedImageDataUrl.length > 10) {
+                state.generatedImageDataUrl = jData.generatedImageDataUrl;
+              }
 
-              els.heroUrl.value = state.heroImageUrl || "";
-              renderFromState();
+              fillEditorsFromRecipe();
+              buildLayersFromRecipeIfNeeded(false);
               renderCardLayers();
+              renderHero();
               draftModalOverlay.style.display = 'none';
               setStatus("Taslak başarıyla yüklendi!", "ok");
             } catch (err) {
               console.error(err);
-              setStatus("Taslak yüklenirken hata oluştu.", "error");
+              setStatus("Taslak yüklenirken hata oluştu: " + err.message, "error");
               e.target.disabled = false;
             }
           });
@@ -4942,6 +4987,11 @@ Yanıtını KESİNLİKLE VE SADECE aşağıdaki gibi JSON olarak ver. Asla açı
         console.error(e);
         draftGalleryLoading.innerHTML = "Hata: " + e.message;
       }
+    });
+
+    // Lightbox close
+    document.getElementById('draftLightbox').addEventListener('click', () => {
+      document.getElementById('draftLightbox').style.display = 'none';
     });
 
   </script>
