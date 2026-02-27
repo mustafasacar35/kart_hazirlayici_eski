@@ -1,6 +1,6 @@
 {
   "templateName": "4",
-  "createdAt": "2026-02-27T11:43:59.320Z",
+  "createdAt": "2026-02-27T11:44:07.297Z",
   "recipe": {
     "title": "Ketojenik Kurabiye",
     "servis": "4 kişilik",
@@ -248,5 +248,5 @@
     "y": 50
   },
   "heroZoom": 100,
-  "heroImageUrl": ""
+  "heroImageUrl": "https://raw.githubusercontent.com/mustafasacar35/kart_hazirlayici/main/images/4_hero.png"
 }
