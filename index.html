@@ -3381,18 +3381,24 @@ Servis sayısı: {{SERVINGS}}
       try {
         let body = { message: `Update template: ${name}`, content };
 
-        // Önce dosyanın var olup olmadığını kontrol et (422 Unprocessable Content hatasını önlemek için)
-        // cache: "no-store" ekleyerek tarayıcının eski SHA'yı hafızadan (cache) getirmesini engelliyoruz, bu 409 Conflict hatasını çözer.
-        const existing = await fetch(apiUrl, { headers: { "Authorization": `Bearer ${pat}` }, cache: "no-store" });
-        if (existing.ok) {
-          body.sha = (await existing.json()).sha;
-        }
-
         let res = await fetch(apiUrl, {
           method: "PUT",
           headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
           body: JSON.stringify(body)
         });
+
+        // 422 veya 409 alırsak, dosya zaten var demektir. SHA alıp tekrar deneyelim.
+        if (res.status === 409 || res.status === 422) {
+          const existing = await fetch(apiUrl, { headers: { "Authorization": `Bearer ${pat}` }, cache: "no-store" });
+          if (existing.ok) {
+            body.sha = (await existing.json()).sha;
+            res = await fetch(apiUrl, {
+              method: "PUT",
+              headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
+              body: JSON.stringify(body)
+            });
+          }
+        }
 
         if (!res.ok) throw new Error("GitHub yükleme hatası.");
         setStatus(`"${name}" GitHub'a gönderildi!`, "ok");
@@ -4234,7 +4240,7 @@ Yanıtını KESİNLİKLE VE SADECE aşağıdaki gibi geçerli bir JSON objesi ol
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               temperature: 0.9,
-              maxOutputTokens: 250
+              maxOutputTokens: 1000
             }
           })
         });
@@ -4254,10 +4260,18 @@ Yanıtını KESİNLİKLE VE SADECE aşağıdaki gibi geçerli bir JSON objesi ol
           cleanText = cleanText.substring(startIdx, endIdx + 1);
         }
 
-        const obj = JSON.parse(cleanText);
-        return obj.list || [];
+        try {
+          const obj = JSON.parse(cleanText);
+          if (obj && obj.list && Array.isArray(obj.list)) {
+            return obj.list;
+          }
+          return null;
+        } catch (parseError) {
+          console.error("AI JSON parse fail, text was cut off or invalid:", cleanText);
+          return null;
+        }
       } catch (e) {
-        console.error("AI Dish Suggestion Parse Error:", e);
+        console.error("AI Dish Suggestion Error:", e);
         return null;
       }
     }
