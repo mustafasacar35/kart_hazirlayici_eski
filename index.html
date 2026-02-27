@@ -3127,16 +3127,21 @@ Servis sayısı: {{SERVINGS}}
         const imagePromptInput = els.magicImagePrompt.value.trim();
 
         // If user provided a specific image prompt extension, we use it for generation
-        if (imagePromptInput) {
-          // We can append it to the revision prompt or just call Imagen
-          // callImagenGenerate has revisionText parameter
-          await callImagenGenerate(imagePromptInput);
-        } else {
-          await callImagenGenerate();
+        // Eğer Imagen sunucuları yoğunsa (429) en azından tarifi kaybetmeyelim
+        try {
+          if (imagePromptInput) {
+            await callImagenGenerate(imagePromptInput);
+          } else {
+            await callImagenGenerate();
+          }
+          els.progressText.textContent = "Tamamlandı! ✨";
+          setStatus("Magic AI: Tarif ve görsel başarıyla oluşturuldu.", "ok");
+        } catch (imgErr) {
+          console.warn("Imagen generation failed (probably 429 quota limit), but recipe text is saved.", imgErr);
+          els.progressText.textContent = "Tarif Tamam, Görsel Kotaya Takıldı ⚠️";
+          setStatus("Yazılar yerleşti! Ancak Imagen (Resim) sunucuları çok yoğun: " + imgErr.message, "error");
         }
 
-        els.progressText.textContent = "Tamamlandı! ✨";
-        setStatus("Magic AI: Tarif ve görsel başarıyla oluşturuldu.", "ok");
         els.imageRevisionPrompt.value = "";
 
         setTimeout(() => {
@@ -3567,11 +3572,28 @@ Servis sayısı: {{SERVINGS}}
         // 3. Push thumb, full image (if base64), and JSON to GitHub `drafts/` folder
         const pushDraftFile = async (fileName, b64Content, msg) => {
           const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/drafts/${fileName}`;
-          await fetch(url, {
+          let body = { message: msg, content: b64Content };
+
+          let res = await fetch(url, {
             method: "PUT",
             headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ message: msg, content: b64Content })
+            body: JSON.stringify(body)
           });
+
+          // 409 veya 422 dönerse dosya vardır, sha'sını alıp ezerek güncelleyelim
+          if (res.status === 409 || res.status === 422) {
+            const existing = await fetch(url, { headers: { "Authorization": `Bearer ${pat}` }, cache: "no-store" });
+            if (existing.ok) {
+              body.sha = (await existing.json()).sha;
+              res = await fetch(url, {
+                method: "PUT",
+                headers: { "Authorization": `Bearer ${pat}`, "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+              });
+            }
+          }
+
+          if (!res.ok) throw new Error("Draft push failed: " + res.status);
         };
 
         // Push thumbnail
