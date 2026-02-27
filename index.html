@@ -1567,6 +1567,21 @@ Servis sayısı: {{SERVINGS}}</textarea>
     </aside>
   </div>
 
+  <!-- DRAFT GALLERY MODAL -->
+  <div id="draftModalOverlay" class="draft-modal-overlay">
+    <div class="draft-modal">
+      <div class="draft-modal-header">
+        <h2>📂 Taslak Albümü (Arkaplan Kayıtları)</h2>
+        <button id="closeDraftModalBtn" class="draft-modal-close">&times;</button>
+      </div>
+      <div class="draft-modal-body">
+        <div id="draftGalleryLoading" style="text-align:center; padding:40px; color:#888;">GitHub API'den Taslaklar
+          Yükleniyor...</div>
+        <div id="draftGalleryGrid" class="draft-grid" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // =====================================================
     // Varsayılan Prompt Şablonu
@@ -4920,21 +4935,6 @@ Yanıtını KESİNLİKLE VE SADECE aşağıdaki gibi JSON olarak ver. Asla açı
     });
 
   </script>
-
-  <!-- DRAFT GALLERY MODAL -->
-  <div id="draftModalOverlay" class="draft-modal-overlay">
-    <div class="draft-modal">
-      <div class="draft-modal-header">
-        <h2>📂 Taslak Albümü (Arkaplan Kayıtları)</h2>
-        <button id="closeDraftModalBtn" class="draft-modal-close">&times;</button>
-      </div>
-      <div class="draft-modal-body">
-        <div id="draftGalleryLoading" style="text-align:center; padding:40px; color:#888;">GitHub API'den Taslaklar
-          Yükleniyor...</div>
-        <div id="draftGalleryGrid" class="draft-grid" style="display:none;"></div>
-      </div>
-    </div>
-  </div>
 </body>
 
 </html>
