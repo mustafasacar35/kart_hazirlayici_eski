@@ -3305,9 +3305,17 @@ Servis sayısı: {{SERVINGS}}
           els.progressText.textContent = "Tamamlandı! ✨";
           setStatus("Magic AI: Tarif ve görsel başarıyla oluşturuldu.", "ok");
         } catch (imgErr) {
-          console.warn("Imagen generation failed (probably 429 quota limit), but recipe text is saved.", imgErr);
-          els.progressText.textContent = "Tarif Tamam, Görsel Kotaya Takıldı ⚠️";
-          setStatus("Yazılar yerleşti! Ancak Imagen (Resim) sunucuları çok yoğun: " + imgErr.message, "error");
+          console.warn("Imagen failed, trying Pollinations.ai fallback...", imgErr);
+          try {
+            els.progressText.textContent = "Imagen kotaya takıldı, Pollinations.ai deneniyor... 🌀";
+            await callPollinationsGenerate();
+            els.progressText.textContent = "Tamamlandı! (Pollinations.ai ile) ✨";
+            setStatus("Tarif + görsel başarıyla oluşturuldu! (Pollinations.ai fallback kullanıldı)", "ok");
+          } catch (polErr) {
+            console.error("Pollinations also failed:", polErr);
+            els.progressText.textContent = "Tarif Tamam, Görsel Üretilemedi ⚠️";
+            setStatus("Yazılar yerleşti! Ancak görsel hiçbir kaynaktan üretilemedi: " + polErr.message, "error");
+          }
         }
 
         els.imageRevisionPrompt.value = "";
@@ -4152,6 +4160,41 @@ ${revisionText}`
       renderCardLayers();
       saveState();
       return data;
+    }
+
+    // =====================================================
+    // Pollinations.ai Fallback (Free, No API Key)
+    // =====================================================
+    async function callPollinationsGenerate() {
+      const userImagePrompt = state.recipe.imagePrompt || "";
+      if (!userImagePrompt) throw new Error("Görsel prompt bulunamadı.");
+
+      const styleAddon = els.imageStylePrompt.value.trim();
+      let prompt = styleAddon ? `${userImagePrompt}, ${styleAddon}` : userImagePrompt;
+      // Pollinations works best with English prompts, our imagePrompt is already English
+      prompt += ", food photography, high quality, appetizing, no text, no watermark";
+
+      const encoded = encodeURIComponent(prompt);
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1080&height=1080&nologo=true&seed=${Date.now()}`;
+
+      setStatus("Pollinations.ai ile görsel üretiliyor (15-30sn)...", "");
+
+      // Pollinations returns an image directly, we need to convert to base64
+      const res = await fetch(pollinationsUrl);
+      if (!res.ok) throw new Error("Pollinations API hata: " + res.status);
+
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          state.generatedImageDataUrl = reader.result;
+          renderCardLayers();
+          saveState();
+          resolve();
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
     }
 
     // =====================================================
