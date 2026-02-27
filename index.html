@@ -1806,6 +1806,7 @@ Servis sayısı: {{SERVINGS}}
         try { return JSON.parse(jsonStr); } catch (e3) { }
       }
 
+      console.error("AI JSON Parse Error. Raw text:", text);
       throw new Error("JSON parse edilemedi. AI yanıtı geçerli JSON değil.");
     }
 
@@ -3734,7 +3735,11 @@ Servis sayısı: {{SERVINGS}}
         };
 
         // Push thumbnail
-        pushDraftFile(`thumb_${draftName}.jpg`, thumbB64, `Auto-draft thumb: ${draftName}`).catch(e => console.log("Draft thumb skip", e));
+        try {
+          await pushDraftFile(`thumb_${draftName}.jpg`, thumbB64, `Auto-draft thumb: ${draftName}`);
+        } catch (e) {
+          console.log("Draft thumb skip", e);
+        }
 
         // If the generated image is a base64 string, push it as a standalone image file to save JSON space
         if (state.generatedImageDataUrl && state.generatedImageDataUrl.startsWith("data:")) {
@@ -3754,7 +3759,11 @@ Servis sayısı: {{SERVINGS}}
         }
 
         const jsonB64 = btoa(unescape(encodeURIComponent(JSON.stringify(draftJsonObj, null, 2))));
-        pushDraftFile(`${draftName}.json`, jsonB64, `Auto-draft json: ${draftName}`).catch(e => console.log("Draft json skip", e));
+        try {
+          await pushDraftFile(`${draftName}.json`, jsonB64, `Auto-draft json: ${draftName}`);
+        } catch (e) {
+          console.log("Draft json skip", e);
+        }
 
         console.log("Taslak arka planda kaydediliyor:", draftName);
       } catch (err) {
@@ -3968,6 +3977,7 @@ Servis sayısı: {{SERVINGS}}
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.6,
+          maxOutputTokens: 2048,
           responseMimeType: "application/json"
         }
       };
@@ -4811,7 +4821,7 @@ Yanıtını KESİNLİKLE VE SADECE aşağıdaki gibi JSON olarak ver. Asla açı
       draftGalleryGrid.style.display = 'none';
       draftGalleryGrid.innerHTML = '';
 
-      const pat = els.pat.value.trim() || localStorage.getItem("github_pat");
+      const pat = els.githubPat.value.trim() || localStorage.getItem("github_pat_recipe");
       if (!pat) {
         draftGalleryLoading.innerHTML = "GitHub API Token (PAT) girilmedi. Taslaklar okunamıyor.";
         return;
