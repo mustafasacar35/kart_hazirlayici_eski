@@ -4874,7 +4874,7 @@ Yanıtını KESİNLİKLE VE SADECE aşağıdaki gibi JSON olarak ver. Asla açı
             setStatus("Taslak indiriliyor...", "");
             e.target.disabled = true;
             try {
-              const jRes = await fetch(jsonUrl, { headers: { "Authorization": `Bearer ${pat}` }, cache: "no-store" });
+              const jRes = await fetch(jsonUrl, { cache: "no-store" });
               const jData = await jRes.json();
 
               if (jData.templateName) els.templateName.value = jData.templateName;
