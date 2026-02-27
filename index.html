@@ -1335,6 +1335,14 @@ Servis sayısı: {{SERVINGS}}</textarea>
               <input id="imageModel" value="imagen-4.0-generate-001" />
             </div>
           </div>
+          <div class="group">
+            <label>Görsel Motoru</label>
+            <select id="imageProvider">
+              <option value="auto" selected>Otomatik (Imagen → Pollinations)</option>
+              <option value="imagen">Sadece Imagen (Google)</option>
+              <option value="pollinations">Sadece Pollinations.ai (Ücretsiz)</option>
+            </select>
+          </div>
           <div class="row">
             <button id="saveKeyBtn" style="width:100%" class="btn-accent">🔑 API Anahtarlarını Kaydet</button>
           </div>
@@ -1834,6 +1842,36 @@ Servis sayısı: {{SERVINGS}}
         let jsonStr = cleaned.slice(firstArr, lastArr + 1);
         jsonStr = jsonStr.replace(/,\s*([\]\}])/g, "$1");
         try { return JSON.parse(jsonStr); } catch (e3) { }
+      }
+
+      // Step 5: Truncated JSON repair — close open brackets/braces
+      if (first !== -1) {
+        let partial = cleaned.slice(first);
+        // Remove any trailing incomplete key-value (e.g. "protein": "6)
+        partial = partial.replace(/,\s*"[^"]*"\s*:\s*"[^"]*$/, "");
+        partial = partial.replace(/,\s*"[^"]*"\s*:\s*$/, "");
+        partial = partial.replace(/,\s*"[^"]*$/, "");
+        partial = partial.replace(/,\s*$/, "");
+        // Count and close open brackets
+        let opens = 0, closesNeeded = "";
+        for (const ch of partial) {
+          if (ch === '{') opens++;
+          if (ch === '}') opens--;
+        }
+        for (let i = 0; i < opens; i++) closesNeeded += "}";
+        // Also close arrays
+        let arrOpens = 0;
+        for (const ch of partial) {
+          if (ch === '[') arrOpens++;
+          if (ch === ']') arrOpens--;
+        }
+        for (let i = 0; i < arrOpens; i++) closesNeeded = "]" + closesNeeded;
+        const repaired = partial + closesNeeded;
+        try {
+          const result = JSON.parse(repaired);
+          console.warn("JSON was truncated but successfully repaired.");
+          return result;
+        } catch (e4) { }
       }
 
       console.error("AI JSON Parse Error. Raw text:", text);
@@ -3297,24 +3335,49 @@ Servis sayısı: {{SERVINGS}}
         // If user provided a specific image prompt extension, we use it for generation
         // Eğer Imagen sunucuları yoğunsa (429) en azından tarifi kaybetmeyelim
         try {
-          if (imagePromptInput) {
-            await callImagenGenerate(imagePromptInput);
+          const provider = (document.getElementById('imageProvider')?.value) || 'auto';
+
+          if (provider === 'pollinations') {
+            // User chose Pollinations only
+            els.progressText.textContent = "Pollinations.ai ile görsel üretiliyor...";
+            await callPollinationsGenerate();
+          } else if (provider === 'imagen') {
+            // User chose Imagen only
+            if (imagePromptInput) {
+              await callImagenGenerate(imagePromptInput);
+            } else {
+              await callImagenGenerate();
+            }
           } else {
-            await callImagenGenerate();
+            // Auto mode: try Imagen first, fallback to Pollinations
+            if (imagePromptInput) {
+              await callImagenGenerate(imagePromptInput);
+            } else {
+              await callImagenGenerate();
+            }
           }
           els.progressText.textContent = "Tamamlandı! ✨";
           setStatus("Magic AI: Tarif ve görsel başarıyla oluşturuldu.", "ok");
         } catch (imgErr) {
-          console.warn("Imagen failed, trying Pollinations.ai fallback...", imgErr);
-          try {
-            els.progressText.textContent = "Imagen kotaya takıldı, Pollinations.ai deneniyor... 🌀";
-            await callPollinationsGenerate();
-            els.progressText.textContent = "Tamamlandı! (Pollinations.ai ile) ✨";
-            setStatus("Tarif + görsel başarıyla oluşturuldu! (Pollinations.ai fallback kullanıldı)", "ok");
-          } catch (polErr) {
-            console.error("Pollinations also failed:", polErr);
+          const provider = (document.getElementById('imageProvider')?.value) || 'auto';
+          if (provider === 'auto') {
+            // Auto mode: Imagen failed, try Pollinations
+            console.warn("Imagen failed, trying Pollinations.ai fallback...", imgErr);
+            try {
+              els.progressText.textContent = "Imagen kotaya takıldı, Pollinations.ai deneniyor... 🌀";
+              await callPollinationsGenerate();
+              els.progressText.textContent = "Tamamlandı! (Pollinations.ai ile) ✨";
+              setStatus("Tarif + görsel başarıyla oluşturuldu! (Pollinations.ai fallback kullanıldı)", "ok");
+            } catch (polErr) {
+              console.error("Pollinations also failed:", polErr);
+              els.progressText.textContent = "Tarif Tamam, Görsel Üretilemedi ⚠️";
+              setStatus("Yazılar yerleşti! Ancak görsel üretilemedi: " + polErr.message, "error");
+            }
+          } else {
+            // Single provider mode failed
+            console.error("Image generation failed:", imgErr);
             els.progressText.textContent = "Tarif Tamam, Görsel Üretilemedi ⚠️";
-            setStatus("Yazılar yerleşti! Ancak görsel hiçbir kaynaktan üretilemedi: " + polErr.message, "error");
+            setStatus("Yazılar yerleşti! Görsel hata: " + imgErr.message, "error");
           }
         }
 
@@ -4015,7 +4078,7 @@ Servis sayısı: {{SERVINGS}}
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.6,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 4096,
           responseMimeType: "application/json"
         }
       };
