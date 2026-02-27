@@ -933,8 +933,9 @@
         <div style="display:flex; gap:6px;">
           <input id="dishName" value="Ketojenik Kurabiye" style="font-weight:700; border-color:var(--primary); flex:1"
             autocomplete="off" />
-          <button id="dishAiBtn" class="btn primary" style="padding:0 12px; height:38px; flex-shrink:0"
-            title="Yapay Zekadan Yeni İsim ve Makro Üret"><span style="font-size:16px;">✨</span> AI ile Bul</button>
+          <button id="dishAiBtn" class="btn primary"
+            style="width:38px; height:38px; padding:0; display:flex; align-items:center; justify-content:center; flex-shrink:0"
+            title="Yapay Zekadan Yeni İsim ve Makro Üret"><span style="font-size:18px;">✨</span></button>
         </div>
         <div id="dishAutocomplete" class="autocomplete-list"></div>
       </div>
@@ -4388,7 +4389,7 @@ Yanıtını KESİNLİKLE VE SADECE aşağıdaki gibi JSON olarak ver. Asla açı
       }
 
       els.dishAiBtn.disabled = true;
-      els.dishAiBtn.innerHTML = "⏳..";
+      els.dishAiBtn.innerHTML = "⏳";
 
       els.dishAutocomplete.innerHTML = '<div class="autocomplete-item" style="color:#888;font-style:italic">✨ AI İlham Düşünüyor...</div>';
       els.dishAutocomplete.style.display = "block";
@@ -4402,7 +4403,7 @@ Yanıtını KESİNLİKLE VE SADECE aşağıdaki gibi JSON olarak ver. Asla açı
       }
 
       els.dishAiBtn.disabled = false;
-      els.dishAiBtn.innerHTML = '<span style="font-size:16px;">✨</span> AI ile Bul';
+      els.dishAiBtn.innerHTML = '<span style="font-size:18px;">✨</span>';
     });
 
     els.dishName.addEventListener("blur", () => {
