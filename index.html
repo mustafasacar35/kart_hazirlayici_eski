@@ -930,8 +930,12 @@
       <!-- ESSENTIALS AT TOP -->
       <div class="group" style="position:relative;">
         <label>Dish Name / Yemek Adı</label>
-        <input id="dishName" value="Ketojenik Kurabiye" style="font-weight:700; border-color:var(--primary)"
-          autocomplete="off" />
+        <div style="display:flex; gap:6px;">
+          <input id="dishName" value="Ketojenik Kurabiye" style="font-weight:700; border-color:var(--primary); flex:1"
+            autocomplete="off" />
+          <button id="dishAiBtn" class="btn primary" style="padding:0 12px; height:38px; flex-shrink:0"
+            title="Yapay Zekadan Yeni İsim ve Makro Üret"><span style="font-size:16px;">✨</span> AI ile Bul</button>
+        </div>
         <div id="dishAutocomplete" class="autocomplete-list"></div>
       </div>
 
@@ -1528,6 +1532,7 @@ Servis sayısı: {{SERVINGS}}
       textModel: document.getElementById("textModel"),
       imageModel: document.getElementById("imageModel"),
       dishName: document.getElementById("dishName"),
+      dishAiBtn: document.getElementById("dishAiBtn"),
       dishAutocomplete: document.getElementById("dishAutocomplete"),
       servings: document.getElementById("servings"),
       imageAspect: document.getElementById("imageAspect"),
@@ -4354,27 +4359,50 @@ Yanıtını KESİNLİKLE VE SADECE aşağıdaki gibi JSON olarak ver. Asla açı
         return;
       }
 
-      autocompleteTimeout = setTimeout(async () => {
-        els.dishAutocomplete.innerHTML = '<div class="autocomplete-item" style="color:#888;font-style:italic">✨ AI İlham Düşünüyor...</div>';
-        els.dishAutocomplete.style.display = "block";
-
-        let aiResults = await getAiDishSuggestions(val);
-
-        if (aiResults && aiResults.length > 0) {
-          renderAutocomplete(aiResults, true);
-        } else {
-          // Fallback to local list.json exact match
-          function characterFix(v) {
-            return v.toLowerCase().replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ç/g, 'c');
-          }
-          const tokens = val.split(/\s+/).map(characterFix).filter(Boolean);
-          const localResults = Array.from(lipodemRepoDishes).filter(dish => {
-            const n = characterFix(dish);
-            return tokens.every(t => n.includes(t));
-          });
-          renderAutocomplete(localResults, false);
+      autocompleteTimeout = setTimeout(() => {
+        // Fallback to local list.json exact match when simply typing
+        function characterFix(v) {
+          return v.toLowerCase().replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ç/g, 'c');
         }
-      }, 700); // 700ms debounce
+        const tokens = val.split(/\s+/).map(characterFix).filter(Boolean);
+        const localResults = Array.from(lipodemRepoDishes).filter(dish => {
+          const n = characterFix(dish);
+          return tokens.every(t => n.includes(t));
+        });
+        renderAutocomplete(localResults, false);
+      }, 300); // 300ms faster local debounce
+    });
+
+    els.dishAiBtn.addEventListener("click", async () => {
+      ensureDishesLoaded();
+      const val = els.dishName.value.trim();
+      if (!val) {
+        setStatus("AI araması için kutuya bir fikir yazın (örn: tavuk).", "error");
+        return;
+      }
+
+      const apiKey = els.apiKey.value.trim() || localStorage.getItem("gemini_api_key");
+      if (!apiKey) {
+        setStatus("Magic AI Özellikleri için API Key gereklidir.", "error");
+        return;
+      }
+
+      els.dishAiBtn.disabled = true;
+      els.dishAiBtn.innerHTML = "⏳..";
+
+      els.dishAutocomplete.innerHTML = '<div class="autocomplete-item" style="color:#888;font-style:italic">✨ AI İlham Düşünüyor...</div>';
+      els.dishAutocomplete.style.display = "block";
+
+      let aiResults = await getAiDishSuggestions(val);
+
+      if (aiResults && aiResults.length > 0) {
+        renderAutocomplete(aiResults, true);
+      } else {
+        els.dishAutocomplete.innerHTML = '<div class="autocomplete-item" style="color:#d9534f;font-style:italic">AI Yanıt Veremedi. Kutuya başka bir kelime yazdırın.</div>';
+      }
+
+      els.dishAiBtn.disabled = false;
+      els.dishAiBtn.innerHTML = '<span style="font-size:16px;">✨</span> AI ile Bul';
     });
 
     els.dishName.addEventListener("blur", () => {
